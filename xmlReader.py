@@ -32,7 +32,7 @@ def read_xml(inputFile,outputFile):
     gps_out['g_x'] = np.float32((gps_out['lon']-gps_out['lon'][0])*110922) # metres
     gps_out['g_y'] = np.float32((gps_out['lat']-gps_out['lat'][0])*110922) # metres
 
-    gps_out.to_csv(outputFile, index=False)
+    #gps_out.to_csv(outputFile, index=False)
     print("Data imported successfully.")
 
     return gps_out
