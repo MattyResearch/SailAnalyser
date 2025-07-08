@@ -193,9 +193,10 @@ def create_window():
                             command = lambda: browseFiles(2,fileFrame))
 
     button_confirm = Button(fullFrame, 
-                        text = "Confirm",
+                        text = "Confirm\n&\nAnalyse",
                         width=10,
-                        command = lambda:window.quit()) 
+                        height=4,
+                        command = lambda:_quit(window)) 
 
     button_exit = Button(fullFrame, 
                         text = "Exit",
@@ -275,6 +276,7 @@ def create_window():
     tutorialLabel.pack(side="top", anchor=CENTER, fill=None, expand=True)
     tutorialButton.pack(side="top", anchor=CENTER, fill=None, expand=True)
     moreInfoLabel.pack(side="top", anchor=CENTER, fill=None, expand=True)
+    moreInfoLabel.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/MattyResearch/SailAnalyser/wiki/Tutorial"))
 
     meteoRefLabel = Label(refframe,
                             text="Weather data by Open-Meteo.com:\nhttps://open-meteo.com/",
@@ -294,8 +296,8 @@ def create_window():
     button_explore_1.grid(column = 1, row = 0,sticky="w")
     button_explore_2.grid(column = 1, row = 1,sticky="w")
 
-    button_confirm.grid(column = 1, row = 2,sticky="w")
-    button_exit.grid(column = 2,row = 2)
+    button_confirm.grid(column = 2, row = 0,rowspan=2,sticky="w")
+    #button_exit.grid(column = 2,row = 2)
 
     fullFrame.pack(side="top",anchor=E, expand=True, padx=10, pady=10)
     #fullFrame.configure(highlightbackground="black", highlightthickness=1)

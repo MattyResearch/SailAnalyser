@@ -54,6 +54,9 @@ def MainUpdateGraphs(filenameList,windAngleList,satBool):
     mapCanvas= FigureCanvasTkAgg(mapPlotDict['fig'], master=app_window.children["!notebook"].children["!frame2"]) 
     mapCanvas.get_tk_widget().pack(side='top', fill='both', expand=True)
 
+    print("Graphs updated successfully.")
+    app_window.children["!notebook"].select(app_window.children["!notebook"].children["!frame2"])  # Switch to the map tab after updating graphs
+
 
 browseData = passToTk()  # Create an instance of passToTk to hold filenames and initial directory
 windAngleList=[None,None]
