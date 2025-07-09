@@ -264,19 +264,19 @@ def create_window():
                         height=3,
                         justify="center")
     moreInfoLabel = Label(tutorialFrame,
-                        text="For more information and source code, visit:\nhttps://github.com/MattyResearch/SailAnalyser/wiki/Tutorial",
+                        text="For more information and source code, visit:\nhttps://github.com/MattyResearch/SailAnalyser",
                         height=3,
                         justify=CENTER)
     tutorialButton = Button(tutorialFrame,
                             text="Tutorial Video",
-                            command=lambda: webbrowser.open("https://youtu.be/FEyrmVFUo9I?si=-JaCGUXofHxUrkRz"),
+                            command=lambda: webbrowser.open("https://youtu.be/Q7Joq_pVw6M"),
                             height=2,
                             width=20)
     
     tutorialLabel.pack(side="top", anchor=CENTER, fill=None, expand=True)
     tutorialButton.pack(side="top", anchor=CENTER, fill=None, expand=True)
     moreInfoLabel.pack(side="top", anchor=CENTER, fill=None, expand=True)
-    moreInfoLabel.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/MattyResearch/SailAnalyser/wiki/Tutorial"))
+    moreInfoLabel.bind("<Button-1>", lambda e: webbrowser.open("https://github.com/MattyResearch/SailAnalyser"))
 
     meteoRefLabel = Label(refframe,
                             text="Weather data by Open-Meteo.com:\nhttps://open-meteo.com/",
@@ -314,10 +314,13 @@ def create_window():
 
     except:
         pass
-    ico = Image.open("rs800.ico")
-    photo = ImageTk.PhotoImage(ico)
-    window.iconphoto(False, photo)  # Set the window icon
-    window.iconbitmap("rs800.ico")
+    try:
+        ico = Image.open("rs800.ico")
+        photo = ImageTk.PhotoImage(ico)
+        window.iconphoto(False, photo)  # Set the window icon
+        window.iconbitmap("rs800.ico")
+    except:
+        pass
     return window
 
 def _quit(window):
