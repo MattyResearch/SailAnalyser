@@ -141,8 +141,8 @@ def find_neighbours(value, df):
     if not exactmatch.empty:
         return exactmatch.index[0],None
     else:
-        lowerneighbour_ind = [df[df < value].idxmax()]
-        upperneighbour_ind = [df[df > value].idxmin()]
+        lowerneighbour_ind = [df[df < value].idxmax()] if not df[df < value].empty else [0]
+        upperneighbour_ind = [df[df > value].idxmin()] if not df[df > value].empty else [len(df)-1]
         return lowerneighbour_ind[-1], upperneighbour_ind[0]
     
 def a(t,xCoeffs,yCoeffs,spline):
