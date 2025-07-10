@@ -74,14 +74,14 @@ def plotMaps(filenameList,analysedDataDict):
     mapPlotDict = {'fig': mapFig, 'ax': mapAx}
     return mapPlotDict
 
-def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callImgBackground=False):
+def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callimgBackground=False):
     '''
     Plot the GPS data track, adding points for each manoeuvre and arrows for wind direction and direction of travel.
     '''
     mapFig = plt.figure(figsize=(10, 8),layout='constrained')
     mapAx = filenameList.copy()  # Create a list for subplots
     for i in range(0,len(filenameList)):
-        imgBackground=callImgBackground
+        imgBackground=callimgBackground
         colorMap = np.array([np.concatenate([np.zeros(shape=(128,)),np.linspace(0,1,128)]),np.concatenate([np.zeros(shape=(64,)),np.linspace(0,1,64),np.linspace(1,0,64),np.zeros(shape=(64,))]),np.concatenate([np.linspace(1,0,128),np.zeros(shape=(128,))])])
         speedRange = [0,max(max(straightLineDataDict[i]['upwind']['speed']),max(straightLineDataDict[i]['downwind']['speed']))]
         mapAx[i] = mapFig.add_subplot(1, len(filenameList), i+1)
@@ -105,7 +105,7 @@ def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callImgBack
         #http://server.arcgisonline.com/arcgis/rest/services
         
         #mapimg=map.arcgisimage(server='http://server.arcgisonline.com/arcgis',service='World_Imagery', xpixels = 1500, verbose= True)
-        if callImgBackground:
+        if imgBackground:
             try:
                 image=Basemap(llcrnrlon=xLims[0]/110922+float(gpsData['lon'].iloc[0]),llcrnrlat=yLims[0]/110922+float(gpsData['lat'].iloc[0]),urcrnrlon=xLims[1]/110922+float(gpsData['lon'].iloc[0]),urcrnrlat=yLims[1]/110922+float(gpsData['lat'].iloc[0]), epsg=5520).arcgisimage(server='http://server.arcgisonline.com/arcgis',service='World_Imagery', xpixels = 1920, verbose= True)
                 windColor = [0.7,0.7,0.7]
