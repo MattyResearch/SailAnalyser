@@ -133,7 +133,7 @@ def weatherDataFollowBoat(gpsData):
     endTime = gpsData.iloc[-1]['time']
     startLat = gpsData.iloc[0]['lat']
     startLon = gpsData.iloc[0]['lon']
-    if endTime > dt.datetime.now()-dt.timedelta(days=6):
+    if endTime.replace(tzinfo=None) > dt.datetime.now()-dt.timedelta(days=6):
         # If the GPS data is within 5 days past, use forecast data
         weatherDataHourly = retreiveForecastWeatherData([startLat, startLon, startTime, endTime])
     else:
@@ -173,7 +173,7 @@ def weatherDataAtBoat(gpsData):
         cardinalWindAngle = np.ones(24)*0 # degrees
         trueWindSpeed = np.ones(24)*5.0 # m/s
         hours = [dt.datetime(year=gpsData.iloc[0]['time'].year,month=gpsData.iloc[0]['time'].month,day=gpsData.iloc[0]['time'].day)+pd.Timedelta(hours=i) for i in range(24)]
-        weatherDataBoatLocation = pd.DataFrame({'hours':hours,'wind_direction_10m':cardinalWindAngle,'wind_speed_10m':trueWindSpeed})
+        weatherDataBoatLocation = pd.DataFrame({'date':hours,'wind_direction_10m':cardinalWindAngle,'wind_speed_10m':trueWindSpeed})
     print("Open_Meteo API weather:")
     print(weatherDataBoatLocation)
     return weatherDataBoatLocation
