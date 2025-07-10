@@ -121,7 +121,7 @@ def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, l
     convergenceCriterion = 0.01 # seconds
     t0 = gpsTime[0]
     for tGuess in [0,-1,-0.5]: # try t=0, t=-1 and t=1 seconds from the manoeuvre time
-        for spline in splines[0][0]+[0,-1,1,-2,2,-3,3,-4,4,-5,5]+1: # search outward from central spline
+        for spline in splines[0][0]+np.array([0,-1,1,-2,2,-3,3,-4,4,-5,5])+1: # search outward from central spline
             if spline < splines[0][0] or spline > splines[1][0]:
                 continue
             t = np.ones(shape=(2,1))*((manoeuvre-t0+pd.Timedelta(seconds=tGuess))/pd.Timedelta(seconds=1)) # time in seconds for x & y
