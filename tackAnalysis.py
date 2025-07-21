@@ -347,7 +347,7 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
         xCoeffs = cubicSplineInterpolation(gpsData, 'g_x') # create surrogate cubic splines
         yCoeffs = cubicSplineInterpolation(gpsData, 'g_y')
 
-        if windAngleList[i] is not None:
+        if windAngleList[i] != None and windAngleList[i] != '':
             weatherDataBoatLocation = manualWindInput(0,windAngleList[i],gpsData)
         else:
             weatherDataBoatLocation = weatherDataAtBoat(gpsData)
@@ -528,7 +528,7 @@ def manoeuvreAnalysisCubic(xCoeffs,yCoeffs,manoeuvreWindow,manoeuvre_n,manoeuvre
 
 if __name__ == "__main__":
     browseData=passToTk()
-    browseData.filenameList=["C:/Users/matth/Documents/SailAnalyser/2025_06_15 OSC Race 1.gpx","C:/Users/matth/Documents/SailAnalyser/2025_06_15 OSC Race 2.gpx"]
+    browseData.filenameList=["C:/Users/matth/Documents/SailAnalyser/2025_06_15 OSC Race 2.gpx","C:/Users/matth/Downloads/moGPXTracker_20250709033732.gpx"]
     browseData.initialdir = "/"  # Initial directory for file dialog
     #app_window = fileSelectionWindow()
     #app_window.mainloop()  # Start the Tkinter event loop
@@ -536,5 +536,4 @@ if __name__ == "__main__":
     windowSize=30
     filenameList = browseData.filenameList
     tackPlotDict, gybePlotDict, analysedDataDict=analyseManoeuvresCubicInterp(filenameList, windAngleList,windowSize)
-    tackPlotDict['fig'].show(block=True)
-    gybePlotDict['fig'].show(block=True)
+    plt.show()
