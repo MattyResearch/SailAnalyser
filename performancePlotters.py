@@ -22,12 +22,12 @@ def tackPlots(tackAnalysed,windowSize,avgTack,tackPlotDict,colour,name):
         lims['metresLost'][1]=LimMetresLost[1] if lims['metresLost'][1]<LimMetresLost[1] else lims['metresLost'][1]
         lims['metresLost'][0]=LimMetresLost[0] if (lims['metresLost'][0]>LimMetresLost[0]) else lims['metresLost'][0]
 
-    for i in range(len(tackAnalysed)+1):
-        if i == len(tackAnalysed):
-            tackAx[0,0].plot(avgTack[:,0], avgTack[:,1],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
-            tackAx[0,1].plot(avgTack[:,0], avgTack[:,2],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
-            tackAx[1,0].plot(avgTack[:,0], avgTack[:,3],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
-            tackAx[1,1].plot(avgTack[:,0], avgTack[:,4],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
+    for i in range(list(tackAnalysed)[-1]+2):
+        if i == list(tackAnalysed)[-1]+1:
+            tackAx[0,0].plot(avgTack[:,0], avgTack[:,1],lw=2,linestyle="-",color=colour,label=name,zorder=list(tackAnalysed)[-1]+1,alpha=1)
+            tackAx[0,1].plot(avgTack[:,0], avgTack[:,2],lw=2,linestyle="-",color=colour,label=name,zorder=list(tackAnalysed)[-1]+1,alpha=1)
+            tackAx[1,0].plot(avgTack[:,0], avgTack[:,3],lw=2,linestyle="-",color=colour,label=name,zorder=list(tackAnalysed)[-1]+1,alpha=1)
+            tackAx[1,1].plot(avgTack[:,0], avgTack[:,4],lw=2,linestyle="-",color=colour,label=name,zorder=list(tackAnalysed)[-1]+1,alpha=1)
 
             '''tackAx[0,0].legend(prop={'size': 6})
             tackAx[0,1].legend(prop={'size': 6})
@@ -104,13 +104,13 @@ def gybePlots(gybeAnalysed,windowSize,avgGybe,gybePlotDict,colour,name):
         lims['metresLost'][1]=LimMetresLost[1] if lims['metresLost'][1]<LimMetresLost[1] else lims['metresLost'][1]
         lims['metresLost'][0]=LimMetresLost[0] if (lims['metresLost'][0]>LimMetresLost[0]) else lims['metresLost'][0]
 
-    for i in range(len(gybeAnalysed)+1):
-        if i == len(gybeAnalysed):
+    for i in range(list(gybeAnalysed)[-1]+2):
+        if i == list(gybeAnalysed)[-1]+1:
             plots={}
-            plots[0]=gybeAx[0,0].plot(avgGybe[:,0], avgGybe[:,1],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
-            plots[1]=gybeAx[0,1].plot(avgGybe[:,0], avgGybe[:,2],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
-            plots[2]=gybeAx[1,0].plot(avgGybe[:,0], avgGybe[:,3],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
-            plots[3]=gybeAx[1,1].plot(avgGybe[:,0], avgGybe[:,4],lw=2,linestyle="-",color=colour,label=name,zorder=100,alpha=1)
+            plots[0]=gybeAx[0,0].plot(avgGybe[:,0], avgGybe[:,1],lw=2,linestyle="-",color=colour,label=name,zorder=list(gybeAnalysed)[-1]+1,alpha=1)
+            plots[1]=gybeAx[0,1].plot(avgGybe[:,0], avgGybe[:,2],lw=2,linestyle="-",color=colour,label=name,zorder=list(gybeAnalysed)[-1]+1,alpha=1)
+            plots[2]=gybeAx[1,0].plot(avgGybe[:,0], avgGybe[:,3],lw=2,linestyle="-",color=colour,label=name,zorder=list(gybeAnalysed)[-1]+1,alpha=1)
+            plots[3]=gybeAx[1,1].plot(avgGybe[:,0], avgGybe[:,4],lw=2,linestyle="-",color=colour,label=name,zorder=list(gybeAnalysed)[-1]+1,alpha=1)
 
             '''gybeAx[0,0].legend(prop={'size': 6})
             gybeAx[0,1].legend(prop={'size': 6})
