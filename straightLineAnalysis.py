@@ -33,6 +33,7 @@ def straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsTime, weatherDat
     # For each "straight line" spline, integrate the variables to find time-weighted averages.
     upwind = {'vmg':[],'twa':[],'speed':[]}
     downwind = {'vmg':[],'twa':[],'speed':[]}
+    reaching = {'vmg':[],'twa':[],'speed':[]}
     t0 = gpsTime.iloc[0]  # time of first point
     t0aware = t0.replace(tzinfo=weatherData.iloc[0]['date'].tzinfo)
     for spline in straightLineData.index:
@@ -51,11 +52,19 @@ def straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsTime, weatherDat
         pointTWA=pointTWA-360 if pointTWA>180 else pointTWA
         pointTWA=abs(pointTWA)
 
-        if pointVMG > 0:
-            # Upwind
-            upwind['vmg'].append(pointVMG[0])
-            upwind['twa'].append(pointTWA[0])
-            upwind['speed'].append(pointSpeed)
+        if np.arccos(np.dot(boatVector.T/np.linalg.norm(boatVector),windVector/np.linalg.norm(windVector)))< np.deg2rad(105):
+            if np.arccos(np.dot(boatVector.T/np.linalg.norm(boatVector),windVector/np.linalg.norm(windVector)))< np.deg2rad(75):
+                # Upwind
+                upwind['vmg'].append(pointVMG[0])
+                upwind['twa'].append(pointTWA[0])
+                upwind['speed'].append(pointSpeed)
+            else:
+                # Reaching
+                courseVector = np.array([np.sin(np.deg2rad(localWindAngle+90)), np.cos(np.deg2rad(localWindAngle+90))]) # unit wind vector
+                pointVMG = abs(np.dot(boatVector.T,courseVector)) # VMG at point t
+                reaching['vmg'].append(pointVMG[0])
+                reaching['twa'].append(pointTWA[0])
+                reaching['speed'].append(pointSpeed)
         else:
             # Downwind
             downwind['vmg'].append(pointVMG[0])
@@ -66,13 +75,15 @@ def straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsTime, weatherDat
     for key in keys:
         upwind[key] = np.array(upwind[key])
         downwind[key] = np.array(downwind[key])
+        reaching[key] = np.array(reaching[key])
 
-    return upwind, downwind
+    return upwind, downwind,reaching
     
 def straightLineNoInterp(straightLineData, weatherData, nPoints=2000):
     print("Calculating straight line performance...")
     upwind = {'vmg':[],'twa':[],'speed':[]}
     downwind = {'vmg':[],'twa':[],'speed':[]}
+    reaching = {'vmg':[],'twa':[],'speed':[]}
     timeInitialUnaware = straightLineData.iloc[0]['time']
     timeInitialAware = timeInitialUnaware.replace(tzinfo=weatherData.iloc[0]['date'].tzinfo)
     for i in range(0, len(straightLineData)-1):
@@ -82,18 +93,32 @@ def straightLineNoInterp(straightLineData, weatherData, nPoints=2000):
         pointTWA=np.rad2deg(pointTWA)
         pointTWA=pointTWA-360 if pointTWA>180 else pointTWA
         pointTWA=abs(pointTWA)
-        if pointVMG > 0 and straightLineData.iloc[i+1].name.astype(int)-straightLineData.iloc[i].name.astype(int)==1:
-            # Upwind
-            for j in range(0,int(np.floor((straightLineData.iloc[i+1]['time']-straightLineData.iloc[i]['time'])/pd.Timedelta(seconds=1)))):
-                upwind['vmg'].append(pointVMG)
-                upwind['twa'].append(pointTWA)
-                upwind['speed'].append(straightLineData.iloc[i]['speed'])
-        elif straightLineData.iloc[i+1].name.astype(int)-straightLineData.iloc[i].name.astype(int)==1:
-            # Downwind
-            for j in range(0,int(np.floor((straightLineData.iloc[i+1]['time']-straightLineData.iloc[i]['time'])/pd.Timedelta(seconds=1)))):
-                downwind['vmg'].append(pointVMG)
-                downwind['twa'].append(pointTWA)
-                downwind['speed'].append(straightLineData.iloc[i]['speed'])
+        localWindAngle = np.interp((gpsData.iloc[i]['time']-timeInitialUnaware)/pd.Timedelta(seconds=1), (weatherData['date']-timeInitialAware)/pd.Timedelta(seconds=1), weatherData['wind_direction_10m']) # spline midpoint
+        windVector = np.array([np.sin(np.deg2rad(localWindAngle)), np.cos(np.deg2rad(localWindAngle))]) # unit wind vector
+        boatVector = -np.array([straightLineData.iloc[i]['g_x'], straightLineData.iloc[i]['g_y']]) + np.array([straightLineData.iloc[i+1]['g_x'], straightLineData.iloc[i+1]['g_y']])
+
+        if straightLineData.iloc[i+1].name.astype(int)-straightLineData.iloc[i].name.astype(int)==1: # check consecutive points
+            if np.arccos(np.dot(boatVector.T/np.linalg.norm(boatVector),windVector/np.linalg.norm(windVector)))< np.deg2rad(105):
+                if np.arccos(np.dot(boatVector.T/np.linalg.norm(boatVector),windVector/np.linalg.norm(windVector)))< np.deg2rad(75):
+                    # Upwind
+                    for j in range(0,int(np.floor((straightLineData.iloc[i+1]['time']-straightLineData.iloc[i]['time'])/pd.Timedelta(seconds=1)))):
+                        upwind['vmg'].append(pointVMG)
+                        upwind['twa'].append(pointTWA)
+                        upwind['speed'].append(straightLineData.iloc[i]['speed'])
+                else:
+                    # Reaching
+                    courseVector = np.array([np.sin(np.deg2rad(localWindAngle+90)), np.cos(np.deg2rad(localWindAngle+90))])
+                    pointVMG = abs(np.dot(boatVector.T,courseVector)) # VMG at point t
+                    for j in range(0,int(np.floor((straightLineData.iloc[i+1]['time']-straightLineData.iloc[i]['time'])/pd.Timedelta(seconds=1)))):
+                        reaching['vmg'].append(pointVMG)
+                        reaching['twa'].append(pointTWA)
+                        reaching['speed'].append(straightLineData.iloc[i]['speed'])
+            else:
+                # Downwind
+                for j in range(0,int(np.floor((straightLineData.iloc[i+1]['time']-straightLineData.iloc[i]['time'])/pd.Timedelta(seconds=1)))):
+                    downwind['vmg'].append(pointVMG)
+                    downwind['twa'].append(pointTWA)
+                    downwind['speed'].append(straightLineData.iloc[i]['speed'])
 
     upwind['vmg'] = np.array(upwind['vmg'])
     upwind['twa'] = np.array(upwind['twa'])
@@ -101,15 +126,18 @@ def straightLineNoInterp(straightLineData, weatherData, nPoints=2000):
     downwind['vmg'] = np.array(downwind['vmg']) 
     downwind['twa'] = np.array(downwind['twa'])
     downwind['speed'] = np.array(downwind['speed'])
-    return upwind, downwind
+    reaching['vmg'] = np.array(reaching['vmg'])
+    reaching['twa'] = np.array(reaching['twa'])
+    reaching['speed'] = np.array(reaching['speed'])
+    return upwind, downwind, reaching
 
-def violinPlotter(upwind, downwind,violinPlotDict,colour):
+def violinPlotter(upwind, downwind,reaching,violinPlotDict,colour):
     print("Plotting straight line performance...")
     plottedPercentile = 95
     LimVMG=max(np.percentile(upwind['vmg'], plottedPercentile),-np.percentile(downwind['vmg'], 100-plottedPercentile))
     LimSpeed=max(np.percentile(upwind['speed'], plottedPercentile),np.percentile(downwind['speed'], plottedPercentile))
     if violinPlotDict==None:
-        violinFig, violinAx = plt.subplots(3, 2, figsize=(10, 8),sharey=False,sharex=True,layout='constrained')
+        violinFig, violinAx = plt.subplots(3, 3, figsize=(10, 8),sharey=False,sharex=True,layout='constrained')
         violinFig.suptitle('Straight Line Performance', fontsize=16)
         lims={'vmg':LimVMG,'speed':LimSpeed}
     else:
@@ -126,13 +154,20 @@ def violinPlotter(upwind, downwind,violinPlotDict,colour):
     plots[3]=violinAx[0,1].violinplot(-downwind['vmg'], showmedians=False,showextrema=False)
     plots[4]=violinAx[1,1].violinplot(downwind['speed'], showmedians=False,showextrema=False)
     plots[5]=violinAx[2,1].violinplot(downwind['twa'], showmedians=False,showextrema=False)
+    plots[6]=violinAx[0,2].violinplot(reaching['vmg'], showmedians=False,showextrema=False)
+    plots[7]=violinAx[1,2].violinplot(reaching['speed'], showmedians=False,showextrema=False)
+    plots[8]=violinAx[2,2].violinplot(-reaching['twa'], showmedians=False,showextrema=False)
     keys = ['vmg','speed','twa']
 
     for k in range(0,len(plots)):
         plot=plots[k]
-
-        mean=np.mean(upwind[keys[k]] if k<3 else downwind[keys[k-3]])
-        if k == 3 or k==2:
+        if k <3:
+            mean=np.mean(upwind[keys[k]])
+        elif k <6:
+            mean=np.mean(downwind[keys[k-3]])
+        else:
+            mean=np.mean(reaching[keys[k-6]])
+        if k == 3 or k==2 or k==8:
             mean=-mean
         for pc in plot['bodies']:
             pc.set_facecolor(colour)
@@ -158,7 +193,7 @@ def violinPlotter(upwind, downwind,violinPlotDict,colour):
     violinAx[2,0].grid(True, which='major', linestyle='-', linewidth=0.5)
     violinAx[2,0].grid(True, which='minor', linestyle='--', linewidth=0.5,alpha=0.5)
     violinAx[2,0].minorticks_on()
-    violinAx[2,0].set_ylim(-90, 0)
+    violinAx[2,0].set_ylim(-75, 0)
 
     violinAx[0,1].set_title('Downwind')
     violinAx[0,1].set_xticks([])
@@ -178,7 +213,27 @@ def violinPlotter(upwind, downwind,violinPlotDict,colour):
     violinAx[2,1].grid(True, which='major', linestyle='-', linewidth=0.5)
     violinAx[2,1].grid(True, which='minor', linestyle='--', linewidth=0.5,alpha=0.5)
     violinAx[2,1].minorticks_on()
-    violinAx[2,1].set_ylim(90, 180)
+    violinAx[2,1].set_ylim(105, 180)
+
+    violinAx[0,2].set_title('Reaching')
+    violinAx[0,2].set_xticks([])
+    #violinAx[0,1].set_ylabel('VMG (m/s)')
+    violinAx[0,2].grid(True, which='major', linestyle='-', linewidth=0.5)
+    violinAx[0,2].grid(True, which='minor', linestyle='--', linewidth=0.5,alpha=0.5)
+    violinAx[0,2].minorticks_on()
+    violinAx[0,2].set_ylim(0, lims['vmg'])
+
+    #violinAx[1,1].set_ylabel('Boatspeed (m/s)')
+    violinAx[1,2].grid(True, which='major', linestyle='-', linewidth=0.5)
+    violinAx[1,2].grid(True, which='minor', linestyle='--', linewidth=0.5,alpha=0.5)
+    violinAx[1,2].minorticks_on()
+    violinAx[1,2].set_ylim(0, lims['speed'])
+
+    #violinAx[2,1].set_ylabel('TWA (deg)')
+    violinAx[2,2].grid(True, which='major', linestyle='-', linewidth=0.5)
+    violinAx[2,2].grid(True, which='minor', linestyle='--', linewidth=0.5,alpha=0.5)
+    violinAx[2,2].minorticks_on()
+    violinAx[2,2].set_ylim(-105, -75)
 
     violinPlotDict={'lims':lims,'fig':violinFig,'ax':violinAx}
 
@@ -213,8 +268,8 @@ def straightLineAnalysisMain(filenameList, windAngleList,analysedDataDict):
             weatherDataBoatLocation=analysedDataDict[i]['weatherDataBoatLocation']
             manoeuvreData=analysedDataDict[i]['manoeuvreData']
         straightLineData = extractStraightLines(gpsData, manoeuvreData, windowSize=windowSize)
-        upwind, downwind = straightLineNoInterp(straightLineData, weatherDataBoatLocation)
-        violinPlotDict=violinPlotter(upwind,downwind,violinPlotDict if i>0 else None,colours[i])
+        upwind, downwind, reaching = straightLineNoInterp(straightLineData, weatherDataBoatLocation)
+        violinPlotDict=violinPlotter(upwind,downwind,reaching,violinPlotDict if i>0 else None,colours[i])
         label = filenameList[i].rsplit('/', 1)[1]
         legends.append(label)
         legends.append("Mean") if i==0 else legends.append("")
@@ -254,20 +309,20 @@ def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windo
             xCoeffs=analysedDataDict[i]['xCoeffs']
             yCoeffs=analysedDataDict[i]['yCoeffs']
         straightLineData = extractStraightLines(gpsData, manoeuvreData, windowSize=windowSize)
-        upwind, downwind = straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsData['time'], weatherDataBoatLocation)
-        violinPlotDict=violinPlotter(upwind,downwind,violinPlotDict if i>0 else None,colours[i])
+        upwind, downwind,reaching = straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsData['time'], weatherDataBoatLocation)
+        violinPlotDict=violinPlotter(upwind,downwind,reaching,violinPlotDict if i>0 else None,colours[i])
         label = filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0]
         legends.append(label)
         legends.append("Mean") if i==0 else legends.append("")
-        straightLineDataDict[i] = {'upwind':upwind,'downwind':downwind}
+        straightLineDataDict[i] = {'upwind':upwind,'downwind':downwind,'reaching':reaching}
         #addLabel(colours,filenameList[i],i)
     #violinPlotDict['ax'][0,0].legend(*zip(*labels))
-    violinPlotDict['ax'][2,1].legend(legends,prop={'size': 6},bbox_to_anchor=(0.5, -0.4), loc='lower right')
+    violinPlotDict['ax'][2,2].legend(legends,prop={'size': 6},bbox_to_anchor=(0.5, -0.4), loc='lower right')
         
     return violinPlotDict,straightLineDataDict
 
 if __name__ == "__main__":
-    filenameList=["2025_06_15 OSC Race 1","2025_06_15 OSC Race 2"]
+    filenameList=["C:\\Users\\matth\\Documents\\SailAnalyser\\2025_06_15 OSC Race 1.gpx","C:\\Users\\matth\\Documents\\SailAnalyser\\2025_06_15 OSC Race 2.gpx"]
     #labels=[]
     windAngleList=[86,86]
     for i in range(0,len(filenameList)):
@@ -275,7 +330,7 @@ if __name__ == "__main__":
         trueWindSpeed = float(5.0) #m/s
 
         directory = "C:\\Users\\matth\\Documents\\SailAnalyser"
-        filename = filenameList[i]+".gpx"
+        filename = filenameList[i]
         outputfilename = "gps_data.csv"
         outputfile = directory + "\\" + outputfilename
         inputfile = directory + "\\" + filename
@@ -284,13 +339,13 @@ if __name__ == "__main__":
         manoeuvreLength=2 # seconds either side
         colours = ['blue','magenta']
 
-        gpsData = read_xml(inputFile=inputfile,outputFile=outputfile)
+        gpsData = read_xml(inputFile=filenameList[i],outputFile=outputfile)
         weatherDataBoatLocation = weatherDataAtBoat(gpsData)
         gpsData = calculateVelocity(gpsData)
-        tacks, gybes,manoeuvreData = identifyManoeuvresCubic(gpsData, weatherDataBoatLocation)
+        tacks, gybes,manoeuvreData = identifyManoeuvres(gpsData, weatherDataBoatLocation)
         straightLineData = extractStraightLines(gpsData, manoeuvreData, windowSize=windowSize)
-        upwind, downwind = straightLineNoInterp(straightLineData, weatherDataBoatLocation)
-        violinPlotDict=violinPlotter(upwind,downwind,violinPlotDict if 'violinPlotDict' in globals() else None,colours[i])
+        upwind, downwind,reaching = straightLineNoInterp(straightLineData, weatherDataBoatLocation)
+        violinPlotDict=violinPlotter(upwind,downwind,reaching,violinPlotDict if 'violinPlotDict' in globals() else None,colours[i])
         #addLabel(colours,filenameList[i],i)
     #violinPlotDict['ax'][0,0].legend(*zip(*labels))
     violinPlotDict['ax'][0,1].legend([filenameList[0].rsplit('/', 1)[1],"Mean",filenameList[1].rsplit('/', 1)[1],"Mean"],prop={'size': 6})
