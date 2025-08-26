@@ -197,7 +197,7 @@ def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, l
             slowCount+=1
         tickCount+=1
         afterManoeuvreT+=windowSize/16
-    if slowCount/tickCount>0.75:
+    if slowCount/tickCount>=0.75:
         print("Manoeuvre in spline",spline,"at time", manoeuvreDataCubic['time'],"has low exit speed, ignoring")
         delkey = manoeuvre
     manoeuvreDataCubic = pd.Series(manoeuvreDataCubic)
