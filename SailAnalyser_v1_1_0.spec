@@ -19,7 +19,7 @@ datas += collect_data_files('retry_requests')
 
 
 a = Analysis(
-    ['SailAnalyser_v1_0_4.py'],
+    ['SailAnalyser_v1_1_0.py'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -39,7 +39,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='SailAnalyser_v1_0_4',
+    name='SailAnalyser_v1_1_0',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
