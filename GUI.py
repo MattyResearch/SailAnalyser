@@ -5,6 +5,7 @@ from tkinter import ttk
 import webbrowser
 from PIL import Image, ImageTk
 import ctypes
+import requests
 
 '''
 GUI to import files into SailAnalyser
@@ -67,12 +68,12 @@ def _quit(window):
     window.quit()
     window.destroy()
      
-def create_window():                                                                                                 
+def create_window(version):                                                                                                 
     # Create the root window
     window = Tk()
 
     # Set window title
-    window.title('SailAnalyser v1.1')
+    window.title('SailAnalyser '+ version)
 
     # Set window size
     window.geometry("800x800")
@@ -315,9 +316,6 @@ def create_window():
     except:
         pass
     try:
-        ico = Image.open("rs800.ico")
-        photo = ImageTk.PhotoImage(ico)
-        window.iconphoto(False, photo)  # Set the window icon
         window.iconbitmap("rs800.ico")
     except:
         pass
@@ -327,15 +325,35 @@ def _quit(window):
     window.quit()
     window.destroy()
 
-def fileSelectionWindow():
-    app_window = create_window()
+def fileSelectionWindow(version):
+    app_window = create_window(version)
 
     #print("Selected files:", filenameList)
     return app_window
 
+def versionChecker(version):
+    try:
+        response = requests.get("https://api.github.com/repos/MattyResearch/SailAnalyser/releases/latest")
+    except:
+        print("Could not check for updates. Check your internet connection.")
+    if 'SailAnalyser '+version != response.json()["name"]:
+        window = Tk()
+        window.title("Update Available")
+        label = Label(window, text="A new version is available: " + response.json()["name"])
+        label.pack()
+        button = Button(window, text="Take me there", command=lambda: webbrowser.open(response.json()["html_url"]))
+        button.pack()
+        cancel = Button(window, text="Remind me later", command=window.destroy)
+        cancel.pack()
+        try:
+            window.iconbitmap("rs800.ico")
+        except:
+            pass
+        window.mainloop()
+
 if __name__ == "__main__":
     browseData = passToTk()  # Create an instance of passToTk to hold data
-    app_window = fileSelectionWindow()
+    app_window = fileSelectionWindow('v1.1.0')
     pass
     app_window.mainloop()
     pass

@@ -1,4 +1,4 @@
-from GUI import fileSelectionWindow, passToTk, saveGraph, manualWindAngles
+from GUI import fileSelectionWindow, passToTk, saveGraph, manualWindAngles, versionChecker
 from tackAnalysis import analyseManoeuvresMain,analyseManoeuvresCubicInterp
 from straightLineAnalysis import straightLineAnalysisMain,straightLineAnalysisCubic
 from mapPlots import plotMaps,plotmapsCubic
@@ -10,6 +10,7 @@ tackPlotDict = None
 gybePlotDict = None
 violinPlotDict = None
 mapPlotDict = None
+version = 'v1.1.0'
 
 def MainUpdateGraphs(filenameList,windAngleList,satelliteBool):
     global tackPlotDict, gybePlotDict, violinPlotDict, mapPlotDict
@@ -60,7 +61,7 @@ def MainUpdateGraphs(filenameList,windAngleList,satelliteBool):
 
 browseData = passToTk()  # Create an instance of passToTk to hold filenames and initial directory
 windAngleList=[None,None]
-app_window = fileSelectionWindow()
+app_window = fileSelectionWindow(version)
 satBool=tk.IntVar()
 app_window.children["!notebook"].children["!frame2"].children["!button"].configure(command=lambda:saveGraph(mapPlotDict['fig']))
 app_window.children["!notebook"].children["!frame3"].children["!button"].configure(command=lambda:saveGraph(tackPlotDict['fig']))
@@ -72,4 +73,5 @@ app_window.children["!notebook"].children["!frame"].children["!frame2"].children
 app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!button"].configure(command=lambda:MainUpdateGraphs(browseData.filenameList,[app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!entry"].get(),app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!entry2"].get()],satBool.get()))
 app_window.children["!notebook"].children["!frame"].children["!frame"].children["!button3"].configure(
                                                                             command=lambda: MainUpdateGraphs(browseData.filenameList, windAngleList,satBool.get()))  # Update the command to pass filenameList and windAngleList
+versionChecker(version)
 app_window.mainloop()  # Start the Tkinter event loop
