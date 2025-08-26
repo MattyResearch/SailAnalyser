@@ -365,7 +365,7 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
             while repositioned and tickCount < 2: # number of repositions allowed
                 repoAllowed = True
                 manoeuvreWindow,manoeuvreData,localWindDirection,delkey,directionBefore = manoeuvreWindowExtractorCubic(xCoeffs,yCoeffs,gpsData,manoeuvreData,windowSize,manoeuvre_n,manoeuvreLength,repoAllowed)
-                if not delkey:
+                if delkey == None:
                     tackAnalysed[manoeuvre_n], gybeAnalysed[manoeuvre_n]= manoeuvreAnalysisCubic(xCoeffs,yCoeffs,manoeuvreWindow,manoeuvre_n,manoeuvreData,gpsData['time'],windowSize,localWindDirection,directionBefore,nPoints)
                 else:
                     tackAnalysed[manoeuvre_n] = {}
@@ -378,9 +378,14 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
             else:
                 delKeys.append(False)
         #doubleCheck(xCoeffs,yCoeffs,gpsData,manoeuvreData,localWindDirection)
-        
+        for manoeuvre_n in range(0,len(manoeuvreData)-1):
+            for compareManoeuvre in range(manoeuvre_n+1,len(manoeuvreData)-1):
+                if manoeuvre_n not in dictKeys and abs(manoeuvreData.iloc[manoeuvre_n]['time']-manoeuvreData.iloc[compareManoeuvre]['time']) < pd.Timedelta(seconds=2):
+                    dictKeys.append(manoeuvre_n) # delete manoeuvres within 2s of each other to avoid repeats
         # delete flagged manoeuvres
+        delKeys = [False]*len(manoeuvreData)
         for dels in dictKeys:
+            delKeys[dels]=True
             del tackAnalysed[dels]
             del gybeAnalysed[dels]
         
@@ -389,7 +394,7 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
         #doubleCheck(xCoeffs,yCoeffs,gpsData,manoeuvreData,localWindDirection)
         #print("Recommended cardinal wind angle: ",np.rad2deg(avgWindAngle))
         print("Averaging manoeuvres...")
-        for manoeuvre_n in range(len(manoeuvreData)):
+        for manoeuvre_n in range(list(tackAnalysed)[-1]):
             avgTack,avgGybe = averageAnalysisCubic(tackAnalysed,gybeAnalysed,windowSize,manoeuvre_n,avgTack,avgGybe,nPoints)
         avgTack,avgGybe=averageManoeuvres(avgTack,avgGybe)
 
@@ -468,12 +473,24 @@ def manoeuvreWindowExtractorCubic(xCoeffs,yCoeffs,gpsData,manoeuvreData,windowSi
         else:
             direction = 'left'
             localWindDirection =  np.rad2deg(np.arctan2(directionBeforeNorm[0],directionBeforeNorm[1]))-np.arccos(np.sum(np.multiply(directionBeforeNorm,directionAfterNorm)))*90/np.pi # turning left - bisects the turning angle
-        # local wind direction has been found. now reposition the manoeuvre by solving for the local wind direction
+        # this gives the direction of the boat vector as it passes through the wind, NOT the actual wind direction
         storeTack = manoeuvreData.iloc[manoeuvre_n]['tack']
         if not manoeuvreData.iloc[manoeuvre_n]['tack']:
-            localWindDirection+=180
-        newRow,delkey = identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsData['time'],windowSize,manoeuvreData['time'].iloc[manoeuvre_n], localWindDirection if manoeuvreData.iloc[manoeuvre_n]['tack'] else localWindDirection+180,splines)
-        newRow['tack']= storeTack # restore the tack value (corrupted by single manoeuvre identification direction vector)
+            localWindDirection+=180 # this gives the REAL local wind direction.
+        #print("Manoeuvre",manoeuvre_n)
+        # local wind direction has been found. now reposition the manoeuvre by solving for the local wind direction
+        newRow,delkey = identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsData['time'],windowSize,manoeuvreData['time'].iloc[manoeuvre_n], localWindDirection if manoeuvreData.iloc[manoeuvre_n]['tack'] else localWindDirection+180,splines,manoeuvreSpline)# if manoeuvreData.iloc[manoeuvre_n]['tack'] else localWindDirection+180
+        checkVector = f_1((newRow['time']-t0)/pd.Timedelta(seconds=1),xCoeffs,yCoeffs,newRow['spline'])
+        checkAngle = np.rad2deg(np.arctan2(checkVector[0],checkVector[1]))
+        if np.cos((checkAngle-localWindDirection)*np.pi/180)>0:
+            checkTack=True
+        else:
+            checkTack=False
+        #if checkTack != storeTack:
+            # check the new tack direction (tack or gybe) against the old. If it's swapped directions, then something has gone wrong. Delete.
+            # this deals with an edge case of cubic spline interpolation where it misinterprets 360 penalty turns as a zig zag. No way around it, GIGO, hence delete the manoeuvres
+        #    delkey = True # if the tack direction is wrong, delete the manoeuvre
+        newRow['tack']= checkTack # restore the tack value (corrupted by single manoeuvre identification direction vector)
         manoeuvreData.iloc[manoeuvre_n] = newRow if newRow['time'] !=[] else manoeuvreData.iloc[manoeuvre_n]
 
     manoeuvreWindow = [manoeuvreData['time'].iloc[manoeuvre_n]-pd.Timedelta(seconds=windowSize/2),manoeuvreData['time'].iloc[manoeuvre_n]+pd.Timedelta(seconds=windowSize/2)]
