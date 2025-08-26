@@ -5,7 +5,7 @@ from xmlReader import read_xml
 from decimal import Decimal,getcontext
 from historicalWeatherData import weatherDataAtBoat
 import datetime as dt
-from cubicInterpolation import find_neighbours,cubicSplineInterpolation,newtons_method,h
+from cubicInterpolation import find_neighbours,cubicSplineInterpolation,newtons_method,h,f_1
 
 def calculateVelocity(gpsData):
     """
@@ -92,7 +92,7 @@ def identifyManoeuvresCubic(xCoeffs,yCoeffs,gpsTime, weatherData):
         gpsAngle = 90-np.rad2deg(np.arctan2(gpsVector[1],gpsVector[0]))
 
         # if sin of the angle difference changes sign, then a tack or gybe has occurred within the previous second
-        if np.sin((gpsAngle-cardinalWindAngle)*np.pi/180)*np.sin((prev_gpsAngle-cardinalWindAngle)*np.pi/180)< 0 and np.mean([np.sqrt(np.dot(prev_gpsVector.T,prev_gpsVector)),np.sqrt(np.dot(gpsVector.T,gpsVector))]) > 0.2:
+        if np.sin((gpsAngle-cardinalWindAngle)*np.pi/180)*np.sin((prev_gpsAngle-cardinalWindAngle)*np.pi/180)< 0:# and np.mean([np.sqrt(np.dot(prev_gpsVector.T,prev_gpsVector)),np.sqrt(np.dot(gpsVector.T,gpsVector))]) > 0.2:
             manoeuvreDataCubic['time'].append(gpsTime[0]+pd.Timedelta(seconds=t))
             manoeuvreDataCubic['spline'].append(spline)
 
@@ -110,7 +110,7 @@ def identifyManoeuvresCubic(xCoeffs,yCoeffs,gpsTime, weatherData):
     print(len(gybes), "gybes found")
     return tacks, gybes, manoeuvreDataCubic
 
-def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, localWindDirection,splines):
+def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, localWindDirection,splines,manoeuvreSpline):
     """
     Identify manoeuvre based on GPS data and wind conditions.
     Solve for t where direction vector = local wind direction.
@@ -120,8 +120,8 @@ def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, l
     maxIter = 20
     convergenceCriterion = 0.01 # seconds
     t0 = gpsTime[0]
-    for tGuess in [0,-1,-0.5]: # try t=0, t=-1 and t=1 seconds from the manoeuvre time
-        for spline in splines[0][0]+np.array([0,-1,1,-2,2,-3,3,-4,4,-5,5])+1: # search outward from central spline
+    for tGuess in [0,-0.5,0.5]: # try t=0, t=-0.5 and t=0.5 seconds from the manoeuvre time
+        for spline in manoeuvreSpline+np.array([0,-1,1,-2,2,-3,3,-4,4,-5,5]): # search outward from central spline
             if spline < splines[0][0] or spline > splines[1][0]:
                 continue
             t = np.ones(shape=(2,1))*((manoeuvre-t0+pd.Timedelta(seconds=tGuess))/pd.Timedelta(seconds=1)) # time in seconds for x & y
@@ -164,13 +164,15 @@ def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, l
                 break # if solution is converged, break out of loop
         if converged:
             break # if solution is converged, break out of loop       
-        elif tGuess != 1:
+        elif tGuess != 0.5:
             #print("Warning: no solution found for manoeuvre at time", manoeuvre,"\nTrying new initial guess.")
             pass
     if not converged:
-            print("!!! WARNING: no solution found for manoeuvre at time", manoeuvre,"!!!")
-            t = np.ones(shape=(2,1))*((manoeuvre-t0)/pd.Timedelta(seconds=1)) # time in seconds
-            delkey = manoeuvre
+        print("N-R convergence failed for manoeuvre at time", manoeuvre,"- using Binary Search")
+        delkey = manoeuvre
+        converged,delkey,manoeuvre=binarySearch(xCoeffs,yCoeffs,gpsTime,directionVector, manoeuvre,windowSize/(2**10),windowSize)
+        t = np.ones(shape=(2,1))*((manoeuvre-t0)/pd.Timedelta(seconds=1)) # time in seconds
+
 
     # interpolate to find wind angle
     t=t[0,0] # both times should be the same, so take one
@@ -184,9 +186,59 @@ def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, l
         manoeuvreDataCubic['tack']=True
     else:
         manoeuvreDataCubic['tack']=False
-            
+    
+    afterManoeuvreT = t+windowSize/4
+    slowCount=0
+    tickCount=0
+    while afterManoeuvreT <= t+windowSize/2:
+        slowSpline=find_neighbours(t0+pd.Timedelta(seconds=afterManoeuvreT), gpsTime)[0] # find the index of the closest time point before this time. 
+        gpsVector = f_1(afterManoeuvreT,xCoeffs,yCoeffs,slowSpline)
+        if np.linalg.norm(gpsVector) < 0.5: # if the speed is too low, then ignore the manoeuvre (assume capsize or other problem)
+            slowCount+=1
+        tickCount+=1
+        afterManoeuvreT+=windowSize/16
+    if slowCount/tickCount>0.75:
+        print("Manoeuvre in spline",spline,"at time", manoeuvreDataCubic['time'],"has low exit speed, ignoring")
+        delkey = manoeuvre
     manoeuvreDataCubic = pd.Series(manoeuvreDataCubic)
     return manoeuvreDataCubic,delkey
+
+def binarySearch(xCoeffs,yCoeffs,gpsTime,windVector, manoeuvre,tolerance,windowSize):
+    # use binary search to find approximate manoeuvre time
+    t0 = gpsTime[0]
+    low = (manoeuvre-t0)/pd.Timedelta(seconds=1)-windowSize/2
+    high = (manoeuvre-t0)/pd.Timedelta(seconds=1)+windowSize/2
+    converged=False
+    delkey=None
+    windAngle = np.rad2deg(np.arctan2(windVector[0],windVector[1]))
+    while high-low >= tolerance:
+        mid=(low+high)/2
+        lowVector = f_1(low,xCoeffs,yCoeffs,find_neighbours(t0+pd.Timedelta(seconds=low), gpsTime)[0])
+        midVector = f_1(mid,xCoeffs,yCoeffs,find_neighbours(t0+pd.Timedelta(seconds=mid), gpsTime)[0])
+        highVector = f_1(high,xCoeffs,yCoeffs,find_neighbours(t0+pd.Timedelta(seconds=high), gpsTime)[0])
+        lowAngle = np.rad2deg(np.arctan2(lowVector[0],lowVector[1]))
+        midAngle = np.rad2deg(np.arctan2(midVector[0],midVector[1]))
+        highAngle = np.rad2deg(np.arctan2(highVector[0],highVector[1]))
+        
+        if np.sin(np.deg2rad(windAngle-lowAngle))*np.sin(np.deg2rad(windAngle-midAngle)) < 0:
+            # if sin changes sign then a manoeuvre exists in the first half
+            if np.sin(np.deg2rad(windAngle-highAngle))*np.sin(np.deg2rad(windAngle-midAngle)) < 0:
+                # there is a manoeuvre in both halves - choose the one which contains the initial manoeuvre time
+                if mid-(manoeuvre-t0)/pd.Timedelta(seconds=1) > 0:
+                    high=mid
+                else:
+                    low=mid
+            else:
+                high=mid
+        else:
+            low=mid
+    if np.sin(np.deg2rad(windAngle-highAngle))*np.sin(np.deg2rad(windAngle-lowAngle)) < 0:
+        converged=True
+        return converged,None,t0+pd.Timedelta(seconds=mid)
+    else:
+        print("!!! WARNING: no solution found for manoeuvre at time", manoeuvre,"!!!")
+        delkey = manoeuvre
+        return converged,delkey,manoeuvre
 
 def doubleCheck(xCoeffs,yCoeffs,gpsData,manoeuvreData,cardinalWindAngle,*args):
     """
@@ -231,8 +283,8 @@ def doubleCheck(xCoeffs,yCoeffs,gpsData,manoeuvreData,cardinalWindAngle,*args):
     plt.show(block=True)
 
 if __name__ == "__main__":
-    directory = "C:\\Users\\matth\\Documents\\SailAnalyser"
-    filename = "2025_06_15 OSC Race 1.gpx"
+    directory = "C:\\Users\\matth\\Downloads"
+    filename = "25_08_17 OSC Feva Helming.gpx"
     outputfilename = "gps_data_directions.csv"
     outputfile = directory + "\\" + outputfilename
     inputfile = directory + "\\" + filename
@@ -246,4 +298,4 @@ if __name__ == "__main__":
     xCoeffs = cubicSplineInterpolation(gpsData, 'g_x') # create surrogate cubic splines
     yCoeffs = cubicSplineInterpolation(gpsData, 'g_y')
     tacks, gybes,manoeuvreDataCubic = identifyManoeuvresCubic(xCoeffs,yCoeffs,gpsData['time'], weatherDataBoatLocation)
-    doubleCheck(gpsData,manoeuvreDataCubic,cardinalWindAngle)
+    doubleCheck(xCoeffs,yCoeffs,gpsData,manoeuvreDataCubic,cardinalWindAngle)
