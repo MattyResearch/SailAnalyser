@@ -72,7 +72,7 @@ def create_window():
     window = Tk()
 
     # Set window title
-    window.title('SailAnalyser v1.0')
+    window.title('SailAnalyser v1.1')
 
     # Set window size
     window.geometry("800x800")
