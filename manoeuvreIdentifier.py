@@ -191,7 +191,9 @@ def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, l
     slowCount=0
     tickCount=0
     while afterManoeuvreT <= t+windowSize/2:
-        slowSpline=find_neighbours(t0+pd.Timedelta(seconds=afterManoeuvreT), gpsTime)[0] # find the index of the closest time point before this time. 
+        slowSpline=find_neighbours(t0+pd.Timedelta(seconds=afterManoeuvreT), gpsTime)[0] # find the index of the closest time point before this time.
+        if slowSpline == len(gpsTime):
+            break
         gpsVector = f_1(afterManoeuvreT,xCoeffs,yCoeffs,slowSpline)
         if np.linalg.norm(gpsVector) < 0.5: # if the speed is too low, then ignore the manoeuvre (assume capsize or other problem)
             slowCount+=1
