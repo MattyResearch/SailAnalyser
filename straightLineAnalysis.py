@@ -134,6 +134,19 @@ def straightLineNoInterp(straightLineData, weatherData, nPoints=2000):
 def violinPlotter(upwind, downwind,reaching,violinPlotDict,colour):
     print("Plotting straight line performance...")
     plottedPercentile = 95
+    if len(upwind['vmg'])==0:
+        upwind['vmg']=np.array([0])
+        upwind['speed']=np.array([0])
+        upwind['twa']=np.array([0])
+    if len(downwind['vmg'])==0:
+        downwind['vmg']=np.array([0])
+        downwind['speed']=np.array([0])
+        downwind['twa']=np.array([0])
+    if len(reaching['vmg'])==0:
+        reaching['vmg']=np.array([0])
+        reaching['speed']=np.array([0])
+        reaching['twa']=np.array([0])
+
     LimVMG=max(np.percentile(upwind['vmg'], plottedPercentile),np.percentile(reaching['vmg'], plottedPercentile),-np.percentile(downwind['vmg'], 100-plottedPercentile))
     LimSpeed=max(np.percentile(upwind['speed'], plottedPercentile),np.percentile(reaching['speed'], plottedPercentile),np.percentile(downwind['speed'], plottedPercentile))
     if violinPlotDict==None:
