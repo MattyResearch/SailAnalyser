@@ -74,7 +74,7 @@ def plotMaps(filenameList,analysedDataDict):
     mapPlotDict = {'fig': mapFig, 'ax': mapAx}
     return mapPlotDict
 
-def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callimgBackground=False):
+def plotmapsCubic(filenameList,analysedInputDict,straightLineDataDict,callimgBackground=False):
     '''
     Plot the GPS data track, adding points for each manoeuvre and arrows for wind direction and direction of travel.
     '''
@@ -85,12 +85,12 @@ def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callimgBack
         colorMap = np.array([np.concatenate([np.zeros(shape=(128,)),np.linspace(0,1,128)]),np.concatenate([np.zeros(shape=(64,)),np.linspace(0,1,64),np.linspace(1,0,64),np.zeros(shape=(64,))]),np.concatenate([np.linspace(1,0,128),np.zeros(shape=(128,))])])
         speedRange = [0,max(max(straightLineDataDict[i]['upwind']['speed']),max(straightLineDataDict[i]['downwind']['speed']))]
         mapAx[i] = mapFig.add_subplot(1, len(filenameList), i+1)
-        gpsData = analysedDataDict[i]['gpsData']
-        manoeuvreData = analysedDataDict[i]['manoeuvreData']
-        weatherDataBoatLocation = analysedDataDict[i]['weatherDataBoatLocation']
+        gpsData = analysedInputDict[i]['gpsData']
+        manoeuvreData = analysedInputDict[i]['manoeuvreData']
+        weatherDataBoatLocation = analysedInputDict[i]['weatherDataBoatLocation']
         name = filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0]
-        xCoeffs = analysedDataDict[i]['xCoeffs']
-        yCoeffs = analysedDataDict[i]['yCoeffs']
+        xCoeffs = analysedInputDict[i]['xCoeffs']
+        yCoeffs = analysedInputDict[i]['yCoeffs']
 
         arrowLen = max(gpsData['g_x'].max()-gpsData['g_x'].min(), gpsData['g_y'].max()-gpsData['g_y'].min())/5
         scatterSize = max(gpsData['g_x'].max()-gpsData['g_x'].min(), gpsData['g_y'].max()-gpsData['g_y'].min())/70
@@ -126,12 +126,12 @@ def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callimgBack
                 mapAx[i].annotate("",xytext=(zeroPos[0], zeroPos[1]),xy=(endPos[0],endPos[1]),arrowprops=dict(arrowstyle="->",lw=0.5,color=windColor),fontsize=7, ha='center', va='center')
             else:
                 mapAx[i].annotate("",xytext=(zeroPos[0], zeroPos[1]),xy=(endPos[0],endPos[1]),arrowprops=dict(arrowstyle="->",lw=0.5,color=windColor),fontsize=7, ha='center', va='center')
-        t0 = gpsData['time'][0]
-        npoints= len(gpsData['time'])
+        t0 = analysedInputDict[i]['t0']
+        npoints = len(gpsData['time'])
         for k in range(0, npoints-1):
             tCommon = (gpsData['time'][k]-t0)/pd.Timedelta(seconds=1)
             t = np.linspace(tCommon, (gpsData['time'][k+1]-t0)/pd.Timedelta(seconds=1), 50)
-            speed = np.linalg.norm(f_1(t[24],xCoeffs,yCoeffs,k))
+            speed = np.linalg.norm(f_1(t[24],xCoeffs,yCoeffs,k)) # find speed at midpoint of the spline
             colorInd = int(np.round(speed*256/speedRange[1]))
             if colorInd > 255:
                 colorInd =255
@@ -147,26 +147,27 @@ def plotmapsCubic(filenameList,analysedDataDict,straightLineDataDict,callimgBack
                 print(f"Error loading background image. Plotted without background")'''
         mapAx[i].tick_params(axis='both', which='major', labelsize=10)
         mapAx[i].grid(True, which='both', linestyle='--', linewidth=0.5)
-        tList = np.ndarray(shape=(len(manoeuvreData['time']),1))
-        tList[:,0]=(manoeuvreData['time']-t0)/pd.Timedelta(seconds=1)
-        tList3=np.power(tList,3)
-        tList2=np.power(tList,2)
-        a=np.array([xCoeffs[manoeuvreData['spline']*4],yCoeffs[manoeuvreData['spline']*4]])
-        b=np.array([xCoeffs[manoeuvreData['spline']*4+1],yCoeffs[manoeuvreData['spline']*4+1]])
-        c=np.array([xCoeffs[manoeuvreData['spline']*4+2],yCoeffs[manoeuvreData['spline']*4+2]])
-        d=np.array([xCoeffs[manoeuvreData['spline']*4+3],yCoeffs[manoeuvreData['spline']*4+3]])
-        #randomIndex = np.random.randint(0, len(gpsData)-1)
-        #plt.annotate("",xytext=(gpsData['g_x'][randomIndex], gpsData['g_y'][randomIndex]),xy=(gpsData['g_x'][randomIndex]+40*np.sin(gpsData['angle'][randomIndex]*np.pi/180),gpsData['g_y'][randomIndex]+40*np.cos(gpsData['angle'][randomIndex]*np.pi/180)),arrowprops=dict(arrowstyle="->",lw=1.5,color='black'),fontsize=7, ha='center', va='center')
-        mapAx[i].scatter(np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0], np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1], color='green', label='Manoeuvres')
-        #plt.show()
-        mapAx[i].scatter((np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0])[manoeuvreData['tack']], (np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1])[manoeuvreData['tack']], color='red', label='Tacks')
-        mapAx[i].scatter((np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0])[~manoeuvreData['tack']], (np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1])[~manoeuvreData['tack']], color='blue', label='Gybes')
-        for manoeuvre in range(0,len(manoeuvreData['time'])):
-            t=(manoeuvreData['time'].iloc[manoeuvre]-t0)/pd.Timedelta(seconds=1) # time in seconds
-            spline = find_neighbours(gpsData['time'][0]+pd.Timedelta(seconds=t), gpsData['time'])[0] # find the index of the closest time point before this time. 
-            gpsVector = np.array([3*xCoeffs[spline*4]*t**2+2*xCoeffs[spline*4+1]*t+xCoeffs[spline*4+2], 3*yCoeffs[spline*4]*t**2+2*yCoeffs[spline*4+1]*t+yCoeffs[spline*4+2]])
-            pos=((np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0])[manoeuvre], (np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1])[manoeuvre])
-            mapAx[i].annotate("",xytext=pos,xy=(pos[0]+gpsVector[0]*40,pos[1]+gpsVector[1]*40),arrowprops=dict(arrowstyle="->",lw=1.5,color=directionColor),fontsize=7, ha='center', va='center')
+        if not manoeuvreData.empty:
+            tList = np.ndarray(shape=(len(manoeuvreData['time']),1))
+            tList[:,0]=(manoeuvreData['time']-t0)/pd.Timedelta(seconds=1)
+            tList3=np.power(tList,3)
+            tList2=np.power(tList,2)
+            a=np.array([xCoeffs[manoeuvreData['spline']*4],yCoeffs[manoeuvreData['spline']*4]])
+            b=np.array([xCoeffs[manoeuvreData['spline']*4+1],yCoeffs[manoeuvreData['spline']*4+1]])
+            c=np.array([xCoeffs[manoeuvreData['spline']*4+2],yCoeffs[manoeuvreData['spline']*4+2]])
+            d=np.array([xCoeffs[manoeuvreData['spline']*4+3],yCoeffs[manoeuvreData['spline']*4+3]])
+            #randomIndex = np.random.randint(0, len(gpsData)-1)
+            #plt.annotate("",xytext=(gpsData['g_x'][randomIndex], gpsData['g_y'][randomIndex]),xy=(gpsData['g_x'][randomIndex]+40*np.sin(gpsData['angle'][randomIndex]*np.pi/180),gpsData['g_y'][randomIndex]+40*np.cos(gpsData['angle'][randomIndex]*np.pi/180)),arrowprops=dict(arrowstyle="->",lw=1.5,color='black'),fontsize=7, ha='center', va='center')
+            mapAx[i].scatter(np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0], np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1], color='green', label='Manoeuvres')
+            #plt.show()
+            mapAx[i].scatter((np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0])[manoeuvreData['tack']], (np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1])[manoeuvreData['tack']], color='red', label='Tacks')
+            mapAx[i].scatter((np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0])[~manoeuvreData['tack']], (np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1])[~manoeuvreData['tack']], color='blue', label='Gybes')
+            for manoeuvre in range(0,len(manoeuvreData['time'])):
+                t=(manoeuvreData['time'].iloc[manoeuvre]-t0)/pd.Timedelta(seconds=1) # time in seconds
+                spline = find_neighbours(t0+pd.Timedelta(seconds=t), gpsData['time'])[0] # find the index of the closest time point before this time. 
+                gpsVector = np.array([3*xCoeffs[spline*4]*t**2+2*xCoeffs[spline*4+1]*t+xCoeffs[spline*4+2], 3*yCoeffs[spline*4]*t**2+2*yCoeffs[spline*4+1]*t+yCoeffs[spline*4+2]])
+                pos=((np.multiply(a[0],tList3)+np.multiply(b[0],tList2)+np.multiply(c[0],tList)+d[0])[manoeuvre], (np.multiply(a[1],tList3)+np.multiply(b[1],tList2)+np.multiply(c[1],tList)+d[1])[manoeuvre])
+                mapAx[i].annotate("",xytext=pos,xy=(pos[0]+gpsVector[0]*40,pos[1]+gpsVector[1]*40),arrowprops=dict(arrowstyle="->",lw=1.5,color=directionColor),fontsize=7, ha='center', va='center')
 
         mapAx[i].set_title(name)
         #mapAx[i].axis('equal')

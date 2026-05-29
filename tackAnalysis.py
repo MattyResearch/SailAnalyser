@@ -328,11 +328,21 @@ def analyseManoeuvresMain(filenameList, windAngleList):
 
 def crop(inputDf,crops,i):
     t0 = inputDf['time'][0]
-    outputData = inputDf[inputDf['time']>=(t0+pd.Timedelta(minutes=crops[i]))]
-    if crops[i+1] != 0:
-        outputData = outputData[outputData['time']<=(t0+pd.Timedelta(minutes=crops[i+1]))]
+
+    preLen = len(inputDf['time'])
+    outputData = inputDf[inputDf['time']>=(t0+pd.Timedelta(minutes=crops[i*2]))]
+    postLen = len(outputData['time'])
+    startCut = preLen-postLen
+
+    preLen = len(outputData['time'])
+    if crops[i*2+1] != 0:
+        outputData = outputData[outputData['time']<=(t0+pd.Timedelta(minutes=crops[i*2+1]))]
     outputData.reset_index(drop=True,inplace=True)
-    return outputData
+    postLen = len(outputData['time'])
+    endCut = preLen-postLen
+
+    cuts = {'start':startCut,'end':endCut}
+    return outputData, cuts
 
 def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
     analysedDataDict = {}
@@ -352,7 +362,7 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
 
         xmldata = read_xml(inputFile=filename,outputFile=outputfile)
         xmlDuration = (xmldata['time'].iloc[-1]-xmldata['time'][0])/pd.Timedelta(minutes=1)
-        gpsData = crop(xmldata,crops,i)
+        gpsData,cuts = crop(xmldata,crops,i)
         #gpsData = xmldata
 
         xCoeffs = cubicSplineInterpolation(gpsData, 'g_x') # create surrogate cubic splines
@@ -413,8 +423,9 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
         #gybeAnalysed['averages'] = gybeAnalysed.mean(axis=0)
         tackPlotDict=tackPlots(tackAnalysed,windowSize,avgTack,tackPlotDict if i>0 else None,colours[i],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
         gybePlotDict=gybePlots(gybeAnalysed,windowSize,avgGybe,gybePlotDict if i>0 else None,colours[i],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
-
-        analysedDataDict[i] = {'duration':xmlDuration,'gpsData': gpsData, 'manoeuvreData': manoeuvreData, 'weatherDataBoatLocation': weatherDataBoatLocation, 'xCoeffs': xCoeffs, 'yCoeffs': yCoeffs}
+        t0=gpsData['time'][0]
+        cropped = [(gpsData['time'][0]-xmldata['time'][0])/pd.Timedelta(minutes=1),(xmldata['time'][len(xmldata)-1]-gpsData['time'][len(gpsData)-1])/pd.Timedelta(minutes=1)]
+        analysedDataDict[i] = {'cropped':cropped,'t0':t0,'duration':xmlDuration,'gpsData': gpsData, 'manoeuvreData': manoeuvreData, 'weatherDataBoatLocation': weatherDataBoatLocation, 'xCoeffs': xCoeffs, 'yCoeffs': yCoeffs}
 
     #analysedDataDict={'gpsData':gpsData,'manoeuvreData':manoeuvreData,'weatherDataBoatLocation':weatherDataBoatLocation}
     return tackPlotDict, gybePlotDict, analysedDataDict

@@ -72,12 +72,12 @@ def updateCropSliders(app_window,filenameList,analysedDataDict):
     if len(filenameList) >1:
         # adjust slider scales for cropping
         maxTime = int(np.floor(analysedDataDict[0]['duration'])+1) # wrong place, needs ot be decided separately for both files
-        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame"].children["!scale"].configure(to=maxTime)
-        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame"].children["!scale"].configure(tickinterval=np.floor(maxTime/4))
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!scale"].configure(to=maxTime)
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!scale"].configure(tickinterval=np.floor(maxTime/4))
 
         maxTime = int(np.floor(analysedDataDict[1]['duration'])+1) # wrong place, needs ot be decided separately for both files
-        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame2"].children["!scale"].configure(to=maxTime)
-        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame2"].children["!scale"].configure(tickinterval=np.floor(maxTime/4))
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!scale2"].configure(to=maxTime)
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!scale2"].configure(tickinterval=np.floor(maxTime/4))
         # Pack map data selction frames
         app_window.children["!notebook"].children["!frame2"].children["!frame"].pack(side='top', fill=None,expand=True)
     else:
