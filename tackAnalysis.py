@@ -326,7 +326,15 @@ def analyseManoeuvresMain(filenameList, windAngleList):
     #analysedDataDict={'gpsData':gpsData,'manoeuvreData':manoeuvreData,'weatherDataBoatLocation':weatherDataBoatLocation}
     return tackPlotDict, gybePlotDict, analysedDataDict
 
-def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
+def crop(inputDf,crops,i):
+    t0 = inputDf['time'][0]
+    outputData = inputDf[inputDf['time']>=(t0+pd.Timedelta(minutes=crops[i]))]
+    if crops[i+1] != 0:
+        outputData = outputData[outputData['time']<=(t0+pd.Timedelta(minutes=crops[i+1]))]
+    outputData.reset_index(drop=True,inplace=True)
+    return outputData
+
+def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
     analysedDataDict = {}
     for i in range(0,len(filenameList)):
         cardinalWindAngle = windAngleList[i] #degrees
@@ -342,7 +350,10 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
         colours = ['blue','magenta']
         nPoints = 501 # number of points in each graph
 
-        gpsData = read_xml(inputFile=filename,outputFile=outputfile)
+        xmldata = read_xml(inputFile=filename,outputFile=outputfile)
+        xmlDuration = (xmldata['time'].iloc[-1]-xmldata['time'][0])/pd.Timedelta(minutes=1)
+        gpsData = crop(xmldata,crops,i)
+        #gpsData = xmldata
 
         xCoeffs = cubicSplineInterpolation(gpsData, 'g_x') # create surrogate cubic splines
         yCoeffs = cubicSplineInterpolation(gpsData, 'g_y')
@@ -403,7 +414,7 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize):
         tackPlotDict=tackPlots(tackAnalysed,windowSize,avgTack,tackPlotDict if i>0 else None,colours[i],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
         gybePlotDict=gybePlots(gybeAnalysed,windowSize,avgGybe,gybePlotDict if i>0 else None,colours[i],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
 
-        analysedDataDict[i] = {'gpsData': gpsData, 'manoeuvreData': manoeuvreData, 'weatherDataBoatLocation': weatherDataBoatLocation, 'xCoeffs': xCoeffs, 'yCoeffs': yCoeffs}
+        analysedDataDict[i] = {'duration':xmlDuration,'gpsData': gpsData, 'manoeuvreData': manoeuvreData, 'weatherDataBoatLocation': weatherDataBoatLocation, 'xCoeffs': xCoeffs, 'yCoeffs': yCoeffs}
 
     #analysedDataDict={'gpsData':gpsData,'manoeuvreData':manoeuvreData,'weatherDataBoatLocation':weatherDataBoatLocation}
     return tackPlotDict, gybePlotDict, analysedDataDict

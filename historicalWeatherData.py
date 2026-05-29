@@ -24,7 +24,7 @@ def retreiveHistoricalWeatherData(parameters):
         "longitude": parameters[1],
         "start_date": parameters[2].strftime("%Y-%m-%d"),
         "end_date": parameters[3].strftime("%Y-%m-%d"),
-        "hourly": ["wind_direction_100m", "wind_speed_100m"],
+        "hourly": ["wind_direction_10m", "wind_speed_10m"],
         "models": "ecmwf_ifs"
     }
     responses = openmeteo.weather_api(url, params=params)
@@ -73,7 +73,7 @@ def retreiveForecastWeatherData(parameters):
         "longitude": parameters[1],
         "start_date": parameters[2].strftime("%Y-%m-%d"),
         "end_date": parameters[3].strftime("%Y-%m-%d"),
-        "hourly": ["wind_direction_120m", "wind_speed_120m"],
+        "minutely_15": ["wind_direction_10m", "wind_speed_10m"],
     }
     responses = openmeteo.weather_api(url, params=params)
 
@@ -85,23 +85,23 @@ def retreiveForecastWeatherData(parameters):
     print(f"Timezone difference to GMT+0 {response.UtcOffsetSeconds()} s")
 
     # Process hourly data. The order of variables needs to be the same as requested.
-    hourly = response.Hourly()
-    hourly_wind_direction_120m = hourly.Variables(0).ValuesAsNumpy()
-    hourly_wind_speed_120m = hourly.Variables(1).ValuesAsNumpy()
+    minutely_15 = response.Minutely15()
+    minutely_15_wind_direction_10m = minutely_15.Variables(0).ValuesAsNumpy()
+    minutely_15_wind_speed_10m = minutely_15.Variables(1).ValuesAsNumpy()
 
-    hourly_data = {"date": pd.date_range(
-        start = pd.to_datetime(hourly.Time(), unit = "s", utc = True),
-        end = pd.to_datetime(hourly.TimeEnd(), unit = "s", utc = True),
-        freq = pd.Timedelta(seconds = hourly.Interval()),
+    minutely_15_data = {"date": pd.date_range(
+        start = pd.to_datetime(minutely_15.Time(), unit = "s", utc = True),
+        end = pd.to_datetime(minutely_15.TimeEnd(), unit = "s", utc = True),
+        freq = pd.Timedelta(seconds = minutely_15.Interval()),
         inclusive = "left"
     )}
 
-    hourly_data["wind_direction_10m"] = hourly_wind_direction_120m
-    hourly_data["wind_speed_10m"] = hourly_wind_speed_120m
+    minutely_15_data["wind_direction_10m"] = minutely_15_wind_direction_10m
+    minutely_15_data["wind_speed_10m"] = minutely_15_wind_speed_10m
 
-    hourly_dataframe = pd.DataFrame(data = hourly_data)
-    #print(hourly_dataframe)
-    return hourly_dataframe
+    minutely_15_dataframe = pd.DataFrame(data = minutely_15_data)
+    #print(minutely_15_dataframe)
+    return minutely_15_dataframe
 
 def hourlyLocationExtract(gpsData):
     """

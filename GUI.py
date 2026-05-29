@@ -6,6 +6,8 @@ import webbrowser
 from PIL import Image, ImageTk
 import ctypes
 import requests
+import numpy as np
+import pandas as pd
 
 '''
 GUI to import files into SailAnalyser
@@ -14,10 +16,12 @@ GUI to import files into SailAnalyser
 class passToTk:
     filenameList=["", ""]  # List to store filenames
     initialdir = "/"  # Initial directory for file dialog
+    crops = [0,0,0,0]
 
-    def test(self, filenameList, initialdir):
+    def test(self, filenameList, initialdir, crops):
         self.filenameList = filenameList
         self.initialdir = initialdir
+        self.crops = crops
 
 browseData= passToTk()  # Create an instance of passToTk to hold filenames and initial directory
 
@@ -63,6 +67,33 @@ def manualWindAngles(input):
             windAngleList[1] = input[1] if input[1] != "" else None
 
     return windAngleList
+
+def updateCropSliders(app_window,filenameList,analysedDataDict):
+    if len(filenameList) >1:
+        # adjust slider scales for cropping
+        maxTime = int(np.floor(analysedDataDict[0]['duration'])+1) # wrong place, needs ot be decided separately for both files
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame"].children["!scale"].configure(to=maxTime)
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame"].children["!scale"].configure(tickinterval=np.floor(maxTime/4))
+
+        maxTime = int(np.floor(analysedDataDict[1]['duration'])+1) # wrong place, needs ot be decided separately for both files
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame2"].children["!scale"].configure(to=maxTime)
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].children["!frame2"].children["!scale"].configure(tickinterval=np.floor(maxTime/4))
+        # Pack map data selction frames
+        app_window.children["!notebook"].children["!frame2"].children["!frame"].pack(side='top', fill=None,expand=True)
+    else:
+        # adjust slider scales for cropping
+        maxTime = int(np.floor(analysedDataDict[0]['duration'])+1) # wrong place, needs ot be decided separately for both files
+        app_window.children["!notebook"].children["!frame2"].children["!frame2"].children["!scale"].configure(to=maxTime)
+        app_window.children["!notebook"].children["!frame2"].children["!frame2"].children["!scale"].configure(tickinterval=np.floor(maxTime/4))
+
+        app_window.children["!notebook"].children["!frame2"].children["!frame2"].pack(side='top', fill=None,expand=True)
+
+def setCrops(index,input):
+    '''
+    Sets given crop times for GPS data cropping
+    '''
+    browseData.crops[index]=input
+    return
 
 def _quit(window):
     window.quit()
@@ -158,15 +189,80 @@ def create_window(version):
                                     text="Confirm",
                                     command=manualWindAngles([1]))
     
+    cropSlider1 = Scale(windAngleInputs,
+                        from_=0, to=180,
+                        orient="horizontal",
+                        label="Crop GPS Data (minutes)",
+                        length=250,
+                        tickinterval=15,
+                        resolution=1)
+    cropSlider1.set(0)  # Set default value to 0 minutes
+
+    cropSlider2 = Scale(windAngleInputs,
+                        from_=0, to=180,
+                        orient="horizontal",
+                        label="Crop GPS Data (minutes)",
+                        length=250,
+                        tickinterval=15,
+                        resolution=1)
+    cropSlider2.set(0)  # Set default value to 0 minutes
+
+    cropSliderSingle = Scale(windAngleInputSingle,
+                        from_=0, to=180,
+                        orient="horizontal",
+                        label="Crop GPS Data (minutes)",
+                        length=500,
+                        tickinterval=15,
+                        resolution=1)
+    cropSliderSingle.set(0)  # Set default value to 0 minutes
+
+    cropsFrame1 = ttk.Frame(windAngleInputs)
+    cropsStart1 = Button(cropsFrame1,
+                        text="Set Start",
+                        command=setCrops(0,0))
+    cropsEnd1 = Button(cropsFrame1,
+                        text="Set End",
+                        command=setCrops(1,0))
+    cropsStart1.pack(side='left',fill='both',expand=True)
+    cropsEnd1.pack(side='left',fill='both',expand=True)
+    
+    cropsFrame2 = ttk.Frame(windAngleInputs)
+    cropsStart2 = Button(cropsFrame2,
+                        text="Set Start",
+                        command=setCrops(2,0))
+    cropsEnd2 = Button(cropsFrame2,
+                        text="Set End",
+                        command=setCrops(3,0))
+    cropsStart2.pack(side='left',fill='both',expand=True)
+    cropsEnd2.pack(side='left',fill='both',expand=True)
+
+    cropsFrameSingle = ttk.Frame(windAngleInputSingle)
+    cropsStartSingle = Button(cropsFrameSingle,
+                        text="Set Start",
+                        command=setCrops(0,0))
+    cropsEndSingle = Button(cropsFrameSingle,
+                        text="Set End",
+                        command=setCrops(1,0))
+    cropsStartSingle.pack(side='left',fill='both',expand=True)
+    cropsEndSingle.pack(side='left',fill='both',expand=True)
+    
+    
     manualWindAngleLabel1.grid(row=0, column=0, pady=20,columnspan=2)
     manualWindAngleLabel2.grid(row=0, column=0, pady=20,columnspan=2)
     manualWindAngleText1.grid(row=1, column=0, padx=50, pady=5)
     manualWindAngleText2.grid(row=1, column=1, padx=50, pady=5)
-    manualWindInputButton1.grid(row=2, column=0, padx=50, pady=5, columnspan=2)
-    
+    cropSlider1.grid(row=2,column=0,pady=20)
+    cropSlider2.grid(row=2,column=1,pady=20)
+    cropsFrame1.grid(row=3,column=0,padx=0,pady=0)
+    cropsFrame2.grid(row=3,column=1,padx=0,pady=0)
+    manualWindInputButton1.grid(row=4, column=0, padx=50, pady=5, columnspan=2)
     windAngleInputs.pack(side='top', fill=None,expand=True)
+
     manualWindAngleTextSingle.grid(row=1, column=0, padx=50, pady=5)
-    manualWindInputButtonSingle.grid(row=2, column=0, padx=50, pady=5)
+    cropSliderSingle.grid(row=2,column=0,padx=50,pady=5)
+    cropsFrameSingle.grid(row=3,column=0)
+    manualWindInputButtonSingle.grid(row=4, column=0, padx=50, pady=5)
+    
 
     # Create a File Explorer label
     label_file_1 = Label(fileFrame, 
@@ -353,7 +449,7 @@ def versionChecker(version):
 
 if __name__ == "__main__":
     browseData = passToTk()  # Create an instance of passToTk to hold data
-    app_window = fileSelectionWindow('v1.1.0')
+    app_window = fileSelectionWindow('v1.1.2')
     pass
     app_window.mainloop()
     pass

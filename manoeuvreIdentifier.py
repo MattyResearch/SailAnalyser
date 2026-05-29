@@ -108,6 +108,7 @@ def identifyManoeuvresCubic(xCoeffs,yCoeffs,gpsTime, weatherData):
     gybes = manoeuvreDataCubic.loc[~manoeuvreDataCubic.tack]
     print(len(tacks)," tacks found")
     print(len(gybes), "gybes found")
+    manoeuvreDataCubic['time']=manoeuvreDataCubic['time'].astype("datetime64[ns]")
     return tacks, gybes, manoeuvreDataCubic
 
 def identifySingleManoeuvreCubic(xCoeffs,yCoeffs,gpsTime,windowSize,manoeuvre, localWindDirection,splines,manoeuvreSpline):
