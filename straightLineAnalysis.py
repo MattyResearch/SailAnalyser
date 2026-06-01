@@ -292,7 +292,7 @@ def straightLineAnalysisMain(filenameList, windAngleList,analysedDataDict):
 
     return violinPlotDict
 
-def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windowSize):
+def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windowSize,colours):
     legends = []
     straightLineDataDict = {}
     for i in range(0,len(filenameList)):
@@ -305,7 +305,6 @@ def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windo
         outputfile = directory + "\\" + outputfilename
 
         manoeuvreLength=2 # seconds either side
-        colours = ['blue','magenta']
         if 'analysedDataDict' not in locals():
             gpsData = read_xml(inputFile=filename,outputFile=outputfile)
 
@@ -323,7 +322,7 @@ def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windo
             yCoeffs=analysedDataDict[i]['yCoeffs']
         straightLineData = extractStraightLines(gpsData, manoeuvreData, windowSize=windowSize)
         upwind, downwind,reaching = straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsData['time'], weatherDataBoatLocation)
-        violinPlotDict=violinPlotter(upwind,downwind,reaching,violinPlotDict if i>0 else None,colours[i])
+        violinPlotDict=violinPlotter(upwind,downwind,reaching,violinPlotDict if i>0 else None,colours[i][1])
         label = filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0]
         legends.append(label)
         legends.append("Mean") if i==0 else legends.append("")

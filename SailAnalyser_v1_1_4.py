@@ -31,8 +31,8 @@ def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDic
             cropInput[i*2]=0 # cropInput exists only for the map plot.
         if analysedDataDict[i]['cropped'][1]!= 0 and analysedDataDict[i]['cropped'][1]<browseData.crops[i*2+1]:
             cropInput[i*2+1]=0
-        mapInputDict[i]['t0'] = mapInputDict[i]['gpsData']['time'][0]
-        mapInputDict[i]['gpsData'],cuts = crop(mapInputDict[i]['gpsData'],cropInput,i)
+
+        mapInputDict[i]['gpsData'],cuts = crop(mapInputDict[i]['gpsData'],cropInput,i,mapInputDict[i]['xmlt0'])
         mapInputDict[i]['manoeuvreData']['spline']=mapInputDict[i]['manoeuvreData']['spline'].sub(cuts['start']) # subtract cropped spline numbers
         mapInputDict[i]['manoeuvreData']=mapInputDict[i]['manoeuvreData'][mapInputDict[i]['manoeuvreData']['spline']<len(mapInputDict[i]['gpsData']['time'])-1]
         mapInputDict[i]['manoeuvreData']=mapInputDict[i]['manoeuvreData'][mapInputDict[i]['manoeuvreData']['spline']>0]
@@ -82,13 +82,13 @@ def MainUpdateGraphs(filenameList,windAngleList,satelliteBool,crops):
     if len(filenameList) ==1:
         app_window.children["!notebook"].children["!frame2"].children["!frame2"].children["!button"].configure(command=lambda:MainUpdateGraphs(browseData.filenameList,[app_window.children["!notebook"].children["!frame2"].children["!frame2"].children["!entry"].get(),None],satBool.get(),browseData.crops))
 
-    tackPlotDict,gybePlotDict,analysedDataDict = analyseManoeuvresCubicInterp(filenameList, windAngleList,windowSize,crops)
+    tackPlotDict,gybePlotDict,analysedDataDict = analyseManoeuvresCubicInterp(filenameList, windAngleList,windowSize,crops,browseData.colours)
     tackCanvas = FigureCanvasTkAgg(tackPlotDict['fig'], master=app_window.children["!notebook"].children["!frame3"])  
     gybeCanvas= FigureCanvasTkAgg(gybePlotDict['fig'], master=app_window.children["!notebook"].children["!frame4"]) 
     tackCanvas.get_tk_widget().pack(side='top', fill='both', expand=True)
     gybeCanvas.get_tk_widget().pack(side='top', fill='both', expand=True)
 
-    violinPlotDict,straightLineDataDict = straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windowSize)
+    violinPlotDict,straightLineDataDict = straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windowSize,browseData.colours)
     violinCanvas= FigureCanvasTkAgg(violinPlotDict['fig'], master=app_window.children["!notebook"].children["!frame5"]) 
     violinCanvas.get_tk_widget().pack(side='top', fill='both', expand=True)
     

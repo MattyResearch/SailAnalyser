@@ -326,17 +326,16 @@ def analyseManoeuvresMain(filenameList, windAngleList):
     #analysedDataDict={'gpsData':gpsData,'manoeuvreData':manoeuvreData,'weatherDataBoatLocation':weatherDataBoatLocation}
     return tackPlotDict, gybePlotDict, analysedDataDict
 
-def crop(inputDf,crops,i):
-    t0 = inputDf['time'][0]
-
+def crop(inputDf,crops,i,xmlt0):
+    # xmlt0 refers to the first time stamp in the original XML file
     preLen = len(inputDf['time'])
-    outputData = inputDf[inputDf['time']>=(t0+pd.Timedelta(minutes=crops[i*2]))]
+    outputData = inputDf[inputDf['time']>=(xmlt0+pd.Timedelta(minutes=crops[i*2]))]
     postLen = len(outputData['time'])
     startCut = preLen-postLen
 
     preLen = len(outputData['time'])
     if crops[i*2+1] != 0:
-        outputData = outputData[outputData['time']<=(t0+pd.Timedelta(minutes=crops[i*2+1]))]
+        outputData = outputData[outputData['time']<=(xmlt0+pd.Timedelta(minutes=crops[i*2+1]))]
     outputData.reset_index(drop=True,inplace=True)
     postLen = len(outputData['time'])
     endCut = preLen-postLen
@@ -344,7 +343,7 @@ def crop(inputDf,crops,i):
     cuts = {'start':startCut,'end':endCut}
     return outputData, cuts
 
-def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
+def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops,colours):
     analysedDataDict = {}
     for i in range(0,len(filenameList)):
         cardinalWindAngle = windAngleList[i] #degrees
@@ -357,12 +356,12 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
         outputfile = outputfilename
 
         manoeuvreLength=6 # seconds total
-        colours = ['blue','magenta']
         nPoints = 501 # number of points in each graph
 
         xmldata = read_xml(inputFile=filename,outputFile=outputfile)
         xmlDuration = (xmldata['time'].iloc[-1]-xmldata['time'][0])/pd.Timedelta(minutes=1)
-        gpsData,cuts = crop(xmldata,crops,i)
+        xmlt0 = xmldata['time'].iloc[0]
+        gpsData,cuts = crop(xmldata,crops,i,xmlt0)
         #gpsData = xmldata
 
         xCoeffs = cubicSplineInterpolation(gpsData, 'g_x') # create surrogate cubic splines
@@ -421,11 +420,11 @@ def analyseManoeuvresCubicInterp(filenameList,windAngleList,windowSize,crops):
 
         #tackAnalysed['averages'] = tackAnalysed[:]
         #gybeAnalysed['averages'] = gybeAnalysed.mean(axis=0)
-        tackPlotDict=tackPlots(tackAnalysed,windowSize,avgTack,tackPlotDict if i>0 else None,colours[i],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
-        gybePlotDict=gybePlots(gybeAnalysed,windowSize,avgGybe,gybePlotDict if i>0 else None,colours[i],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
+        tackPlotDict=tackPlots(tackAnalysed,windowSize,avgTack,tackPlotDict if i>0 else None,colours[i][1],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
+        gybePlotDict=gybePlots(gybeAnalysed,windowSize,avgGybe,gybePlotDict if i>0 else None,colours[i][1],filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0])
         t0=gpsData['time'][0]
         cropped = [(gpsData['time'][0]-xmldata['time'][0])/pd.Timedelta(minutes=1),(xmldata['time'][len(xmldata)-1]-gpsData['time'][len(gpsData)-1])/pd.Timedelta(minutes=1)]
-        analysedDataDict[i] = {'cropped':cropped,'t0':t0,'duration':xmlDuration,'gpsData': gpsData, 'manoeuvreData': manoeuvreData, 'weatherDataBoatLocation': weatherDataBoatLocation, 'xCoeffs': xCoeffs, 'yCoeffs': yCoeffs}
+        analysedDataDict[i] = {'cropped':cropped,'xmlt0':xmlt0,'t0':t0,'duration':xmlDuration,'gpsData': gpsData, 'manoeuvreData': manoeuvreData, 'weatherDataBoatLocation': weatherDataBoatLocation, 'xCoeffs': xCoeffs, 'yCoeffs': yCoeffs}
 
     #analysedDataDict={'gpsData':gpsData,'manoeuvreData':manoeuvreData,'weatherDataBoatLocation':weatherDataBoatLocation}
     return tackPlotDict, gybePlotDict, analysedDataDict

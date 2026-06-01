@@ -16,10 +16,10 @@ datas += collect_data_files('openmeteo_requests')
 datas += collect_data_files('requests_cache')
 datas += collect_data_files('datetime')
 datas += collect_data_files('retry_requests')
-
+datas += collect_data_files('copy')
 
 a = Analysis(
-    ['SailAnalyser_v1_1_3.py'],
+    ['SailAnalyser_v1_1_4.py'],
     pathex=[],
     binaries=[],
     datas=datas,
@@ -39,7 +39,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='SailAnalyser_v1_1_3',
+    name='SailAnalyser_v1_1_4',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

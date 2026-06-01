@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import *
 from tkinter import filedialog
 from tkinter import ttk
+from tkinter import colorchooser
 import webbrowser
 from PIL import Image, ImageTk
 import ctypes
@@ -16,12 +17,14 @@ GUI to import files into SailAnalyser
 class passToTk:
     filenameList=["", ""]  # List to store filenames
     initialdir = "/"  # Initial directory for file dialog
-    crops = [0,0,0,0]
+    crops = [0,0,0,0] # Initial time crops
+    colours = [((...), '#008000'), ((...), '#400080')] # Initial graph colours
 
-    def test(self, filenameList, initialdir, crops):
+    def test(self, filenameList, initialdir, crops, colours):
         self.filenameList = filenameList
         self.initialdir = initialdir
         self.crops = crops
+        self.colours = colours
 
 browseData= passToTk()  # Create an instance of passToTk to hold filenames and initial directory
 
@@ -95,6 +98,10 @@ def setCrops(index,input):
     browseData.crops[index]=input
     return
 
+def choose_colour(index):
+    browseData.colours[index] = colorchooser.askcolor(title="Choose graph 1 colour")
+    return
+
 def _quit(window):
     window.quit()
     window.destroy()
@@ -161,6 +168,7 @@ def create_window(version):
     windAngleInputs = ttk.Frame(mapsTab)
     windAngleInputSingle = ttk.Frame(mapsTab)
     refframe = ttk.Frame(fileSelectionTab)
+    colorPickerFrame = ttk.Frame(advancedOptionsFrame)
 
     manualWindAngleLabel1 = ttk.Label(windAngleInputs,
                                     text="Manually input wind direction:\n (compass heading the wind is coming from)",
@@ -332,6 +340,18 @@ def create_window(version):
                         resolution=2)  # Placeholder command
     windowSlider.set(30)  # Set default value to 30 seconds
 
+    graph1Colour = Button(colorPickerFrame,
+                          text="Set File 1\nColour",
+                          command=lambda:choose_colour(0),
+                          width=10,
+                          height=3)
+    
+    graph2Colour = Button(colorPickerFrame,
+                          text="Set File 2\nColour",
+                          command=lambda:choose_colour(1),
+                          width=10,
+                          height=3)
+
     donationLabel = Label(donationFrame,
                           text="Continued development of this project is made possible\nby donations from sailors like you!\nIf this app has helped you, please consider supporting SailAnalyser.",
                           height=3)
@@ -352,6 +372,11 @@ def create_window(version):
     satelliteYes.pack(side="top",anchor = W, fill=None, expand=True)
     radioGroup.grid(column=0, row=1, padx=10, pady=10)
     windowSlider.grid(column=1, row=1, padx=10, pady=10)
+
+    colorPickerFrame.grid(column=0,row=2,columnspan=2)
+    graph1Colour.grid(column=0,row=0)
+    graph2Colour.grid(column=1,row=0)
+    
     donationLabel.grid(column=0, row=0, padx=10, pady=0)
     donationButton.grid(column=0, row=1, padx=10, pady=0)
     
