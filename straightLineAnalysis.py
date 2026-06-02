@@ -12,20 +12,61 @@ from cubicInterpolation import f,f_1,cubicSplineInterpolation
 '''
 These functions take the straight line portions of the data and draw violin plots to show performance.
 '''
-def extractStraightLines(gpsData, manoeuvreData, windowSize=20):
+def extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=20):
     '''
     Use manoeuvre data to remove manoeuvres from gpsData
     '''
     manoeuvre=0
     i=0
+    localTWA = []
     straightLineData = gpsData.copy()
     while i < len(gpsData) and manoeuvre < len(manoeuvreData):
+        skip = False
         if gpsData.iloc[i]['time'] > manoeuvreData.iloc[manoeuvre]['time']-dt.timedelta(seconds=windowSize/2):
             if gpsData.iloc[i]['time'] < manoeuvreData.iloc[manoeuvre]['time']+dt.timedelta(seconds=windowSize/2):
                 straightLineData = straightLineData.drop(labels=i)
+                skip = True # flag to skip assigning local wind direction to dropped dataframe rows
+                # localWindAngle is now defined as the mean wind angle for that straight line.
+                # This is calculated by taking the mean wind direction from the two nearest manoeuvres.
             else:
-                manoeuvre+=1
+                if manoeuvre < len(manoeuvreData)-2:
+                    manoeuvre+=1
+        if not skip:
+            t1 = int((manoeuvreData.iloc[manoeuvre]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
+            t2 = int((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
+            if gpsData.iloc[i]['time'] < manoeuvreData.iloc[0]['time']: # case before the first manoeuvre
+                boatVelocity = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[0]['spline'])
+                if manoeuvreData.iloc[manoeuvre]['tack']:
+                    pointTWA =  np.pi+np.arctan2(boatVelocity[0],boatVelocity[1])# tack direction is directly head to wind
+                else:
+                    pointTWA = np.arctan2(boatVelocity[0],boatVelocity[1])# gybe direction is directly downwind
+
+            elif gpsData.iloc[i]['time'] > manoeuvreData['time'][len(manoeuvreData)-1]: # case after the last manoeuvre
+                t1 = int((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
+                boatVelocity = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[manoeuvre+1]['spline'])
+                if manoeuvreData.iloc[manoeuvre+1]['tack']:
+                    pointTWA =  np.pi+np.arctan2(boatVelocity[0],boatVelocity[1])# tack direction is directly head to wind
+                else:
+                    pointTWA = np.arctan2(boatVelocity[0],boatVelocity[1])# gybe direction is directly downwind
+
+            else: # other cases where straight line is bounded by manoeuvres
+                boatVelocityStart = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[manoeuvre]['spline']) # manoeuvre pre-line
+                if not manoeuvreData.iloc[manoeuvre]['tack']:
+                    boatVelocityStart = -boatVelocityStart
+
+                boatVelocityEnd = f_1(t2,xCoeffs,yCoeffs,manoeuvreData.iloc[manoeuvre+1]['spline']) # manoeuvre post-line
+                if not manoeuvreData.iloc[manoeuvre+1]['tack']:
+                    boatVelocityEnd = -boatVelocityEnd
+
+                boatStartNorm = boatVelocityStart/np.linalg.norm(boatVelocityStart)
+                boatEndNorm = boatVelocityEnd/np.linalg.norm(boatVelocityEnd)
+                
+                twaAvg = np.atan2(boatEndNorm[0]+boatStartNorm[0],boatEndNorm[1]+boatStartNorm[1]) # add vectors to find total wind angle
+
+                pointTWA = twaAvg
+            localTWA.append(np.remainder(pointTWA[0]*180/np.pi,360))
         i+=1
+    straightLineData = straightLineData.assign(localTWA=localTWA)
     return straightLineData
 
 def straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsTime, weatherData, nPoints=2):
@@ -41,9 +82,9 @@ def straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsTime, weatherDat
             break # no spline after last point
         t1 = (gpsTime[spline]-t0)/pd.Timedelta(seconds=1) # time at the start of spline since t0
         t2 = (gpsTime[spline+1]-t0)/pd.Timedelta(seconds=1) # time at the end of spline
-        localWindAngle = np.interp((t1+t2)/2, (weatherData['date']-t0aware)/pd.Timedelta(seconds=1), weatherData['wind_direction_10m']) # spline midpoint
+        localWindAngle = straightLineData['localTWA'][spline]
         windVector = np.array([np.sin(np.deg2rad(localWindAngle)), np.cos(np.deg2rad(localWindAngle))]) # unit wind vector
-        boatVector = (f(t2,xCoeffs,yCoeffs,spline)-f(t1,xCoeffs,yCoeffs,spline))/(t2-t1) # boat direction vector at point t
+        boatVector = (f(t2,xCoeffs,yCoeffs,spline)-f(t1,xCoeffs,yCoeffs,spline))/(t2-t1) # boat direction vector at point t - mean boat vector for spline
         boatAngle = np.rad2deg(np.arctan2(boatVector[0], boatVector[1])) # angle of boat vector
         pointVMG = np.dot(boatVector.T,windVector) # VMG at point t
         pointTWA = np.rad2deg(np.arctan2(np.sin(np.deg2rad(boatAngle-localWindAngle)),np.cos(np.deg2rad(boatAngle-localWindAngle))))
@@ -320,7 +361,7 @@ def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windo
             manoeuvreData=analysedDataDict[i]['manoeuvreData']
             xCoeffs=analysedDataDict[i]['xCoeffs']
             yCoeffs=analysedDataDict[i]['yCoeffs']
-        straightLineData = extractStraightLines(gpsData, manoeuvreData, windowSize=windowSize)
+        straightLineData = extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=windowSize)
         upwind, downwind,reaching = straightLineInterpCubic(xCoeffs,yCoeffs,straightLineData,gpsData['time'], weatherDataBoatLocation)
         violinPlotDict=violinPlotter(upwind,downwind,reaching,violinPlotDict if i>0 else None,colours[i][1])
         label = filenameList[i].rsplit('/', 1)[1].rsplit('.', 1)[0]
@@ -332,6 +373,65 @@ def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windo
     violinPlotDict['ax'][2,2].legend(legends,prop={'size': 6},bbox_to_anchor=(0.5, -0.4), loc='lower right')
         
     return violinPlotDict,straightLineDataDict
+
+def polarPlotter(filenameList,polarDataDict,polarPlotDict,colours,name,i):
+    print("Plotting Polar Plots...")
+    LimTWA = [0,180]
+    LimSpeed = max(polarDataDict['medians']['r'])
+    if polarPlotDict == None:
+        polarFig = plt.figure(figsize=(10, 8),layout='constrained')
+        polarAx = filenameList.copy()
+        if len(filenameList)==1:
+            polarAx[i]=polarFig.add_subplot(1,1,1,projection='polar')
+        else:
+            polarAx[i]=polarFig.add_subplot(1,2,1,projection='polar')
+        polarFig.suptitle('Polar Performance Plots\nSpeed in m/s', fontsize=16)
+        lims={'twa':LimTWA,'speed':LimSpeed}
+    else:
+        lims=polarPlotDict['lims']
+        polarFig=polarPlotDict['fig']
+        polarAx=polarPlotDict['ax']
+        polarAx[i]=polarFig.add_subplot(1,2,2,projection='polar')
+        lims['speed']=LimSpeed if lims['speed']<LimSpeed else lims['speed']
+
+    polarAx[i].scatter(polarDataDict['TWAlist'],polarDataDict['speedList'],c='0.7',alpha=0.2,label=name)
+    polarAx[i].plot(polarDataDict['medians']['theta'],polarDataDict['medians']['r'],c=colours,label=name)
+    polarAx[i].set_thetamin(0)
+    polarAx[i].set_thetamax(180)
+    polarAx[i].set_rorigin(0)
+    polarAx[i].set_theta_zero_location('N')
+    polarAx[i].grid(True)
+    polarAx[i].set_ylim(0,lims['speed'])
+    polarAx[i].legend(prop={'size': 6},bbox_to_anchor=(0.5, -0.4), loc='lower right')
+    
+    polarPlotDict = {'lims':lims,'fig':polarFig,'ax':polarAx}
+    return polarPlotDict
+
+def polarPlotsCubic(filenameList,straightLineDataDict,colours):
+    polarDataDict = {}
+    polarPlotDict={}
+    for i in range(len(filenameList)):
+        speedList = [*straightLineDataDict[i]['upwind']['speed'],*straightLineDataDict[i]['reaching']['speed'],*straightLineDataDict[i]['downwind']['speed']]
+        TWAList = [*straightLineDataDict[i]['upwind']['twa'],*straightLineDataDict[i]['reaching']['twa'],*straightLineDataDict[i]['downwind']['twa']]
+        pairedDataset = pd.DataFrame({'speedList':speedList,'TWAlist':TWAList})
+        pairedDataset = pairedDataset.sort_values('TWAlist') # order by TWA list
+        step=1
+        window=30
+        theta = []
+        r = []
+        for angle in range(30,171,step):
+            validPoints = []
+            theta.append(np.deg2rad(angle))
+            validPoints = pairedDataset[(pairedDataset['TWAlist']>=(angle-window/2))*(pairedDataset['TWAlist']<=(angle+window/2))]
+            validPoints=validPoints[validPoints['speedList']>=1.5]
+            if not validPoints.empty:
+                r.append(np.mean(validPoints['speedList']))
+            else:
+                r.append(np.nan)
+        medians={'theta':theta,'r':r}
+        polarDataDict[i]={'speedList':speedList,'TWAlist':TWAList,'medians':medians}
+        polarPlotDict = polarPlotter(filenameList,polarDataDict[i],polarPlotDict if i>0 else None,colours[i][1],filenameList[i].rsplit('/', 1)[1],i)
+    return polarPlotDict,polarDataDict
 
 if __name__ == "__main__":
     filenameList=["C:\\Users\\matth\\Documents\\SailAnalyser\\2025_06_15 OSC Race 1.gpx","C:\\Users\\matth\\Documents\\SailAnalyser\\2025_06_15 OSC Race 2.gpx"]

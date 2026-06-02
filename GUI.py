@@ -126,12 +126,14 @@ def create_window(version):
     tacksTab = ttk.Frame(tabControl)
     gybesTab = ttk.Frame(tabControl)
     straightLinesTab = ttk.Frame(tabControl)
+    polarsTab = ttk.Frame(tabControl)
 
     tabControl.add(fileSelectionTab, text='File Selection')
     tabControl.add(mapsTab, text='GPS Maps')
     tabControl.add(tacksTab, text='Tacks')
     tabControl.add(gybesTab, text='Gybes')
     tabControl.add(straightLinesTab, text='Straight Lines')
+    tabControl.add(polarsTab, text='Polar Plots')
     tabControl.pack(expand=1, fill="both")
 
     ttk.Label(fileSelectionTab,
@@ -150,10 +152,14 @@ def create_window(version):
     saveimgButton4 = ttk.Button(mapsTab,
                             text="Save Graph",
                             command=lambda: saveGraph("maps"))
+    saveimgButton5 = ttk.Button(polarsTab,
+                            text="Save Graph",
+                            command=lambda: saveGraph("polars"))
     saveimgButton1.pack(side='top')
     saveimgButton2.pack(side='top')
     saveimgButton3.pack(side='top')
     saveimgButton4.pack(side='top')
+    saveimgButton5.pack(side='top')
     
     #ttk.Label(gybesTab).pack(pady=10)
     
