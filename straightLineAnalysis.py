@@ -386,7 +386,7 @@ def polarPlotter(filenameList,polarDataDict,polarPlotDict,colours,name,i):
             polarAx=polarFig.add_subplot(1,1,1,projection='polar')
         else:
             polarAx=polarFig.add_subplot(1,1,1,projection='polar')
-            polarFig.suptitle('Polar Performance Plots\nSpeed (m/s)', fontsize=16)
+        polarFig.suptitle('Polar Performance Plots\nSpeed (m/s)', fontsize=16)
         lims={'twa':LimTWA,'speed':LimSpeed}
     else:
         lims=polarPlotDict['lims']
@@ -406,7 +406,7 @@ def polarPlotter(filenameList,polarDataDict,polarPlotDict,colours,name,i):
     polarAx.set_theta_zero_location('N')
     polarAx.grid(True)
     polarAx.set_ylim(0,lims['speed'])
-    polarAx.legend(prop={'size': 6},bbox_to_anchor=(0, 0.5), loc='lower right')
+    polarAx.legend(prop={'size': 6},bbox_to_anchor=(0.5, -0.2), loc='upper center')
     
     polarPlotDict = {'lims':lims,'fig':polarFig,'ax':polarAx}
     return polarPlotDict
