@@ -383,27 +383,30 @@ def polarPlotter(filenameList,polarDataDict,polarPlotDict,colours,name,i):
         polarFig = plt.figure(figsize=(10, 8),layout='constrained')
         polarAx = filenameList.copy()
         if len(filenameList)==1:
-            polarAx[i]=polarFig.add_subplot(1,1,1,projection='polar')
+            polarAx=polarFig.add_subplot(1,1,1,projection='polar')
         else:
-            polarAx[i]=polarFig.add_subplot(1,2,1,projection='polar')
-        polarFig.suptitle('Polar Performance Plots\nSpeed in m/s', fontsize=16)
+            polarAx=polarFig.add_subplot(1,1,1,projection='polar')
+            polarFig.suptitle('Polar Performance Plots\nSpeed (m/s)', fontsize=16)
         lims={'twa':LimTWA,'speed':LimSpeed}
     else:
         lims=polarPlotDict['lims']
         polarFig=polarPlotDict['fig']
         polarAx=polarPlotDict['ax']
-        polarAx[i]=polarFig.add_subplot(1,2,2,projection='polar')
+        #polarAx[i]=polarFig.add_subplot(1,2,2,projection='polar')
         lims['speed']=LimSpeed if lims['speed']<LimSpeed else lims['speed']
+    if i==1:
+        polarDataDict['TWAlist']=(polarDataDict['TWAlist']*-1)+np.ones(polarDataDict['TWAlist'].shape)*2*np.pi
+        polarDataDict['medians']['theta']=(np.array(polarDataDict['medians']['theta'])*-1)+2*np.pi
 
-    polarAx[i].scatter(polarDataDict['TWAlist'],polarDataDict['speedList'],c='0.7',alpha=0.2,label=name)
-    polarAx[i].plot(polarDataDict['medians']['theta'],polarDataDict['medians']['r'],c=colours,label=name)
-    polarAx[i].set_thetamin(0)
-    polarAx[i].set_thetamax(180)
-    polarAx[i].set_rorigin(0)
-    polarAx[i].set_theta_zero_location('N')
-    polarAx[i].grid(True)
-    polarAx[i].set_ylim(0,lims['speed'])
-    polarAx[i].legend(prop={'size': 6},bbox_to_anchor=(0.5, -0.4), loc='lower right')
+    polarAx.scatter(polarDataDict['TWAlist'],polarDataDict['speedList'],c=colours,alpha=0.05,label=name)
+    polarAx.plot(polarDataDict['medians']['theta'],polarDataDict['medians']['r'],c=colours,label=name)
+    #polarAx[i].set_thetamin(0)
+    #polarAx[i].set_thetamax(180)
+    polarAx.set_rorigin(0)
+    polarAx.set_theta_zero_location('N')
+    polarAx.grid(True)
+    polarAx.set_ylim(0,lims['speed'])
+    polarAx.legend(prop={'size': 6},bbox_to_anchor=(0, 0.5), loc='lower right')
     
     polarPlotDict = {'lims':lims,'fig':polarFig,'ax':polarAx}
     return polarPlotDict
@@ -417,16 +420,16 @@ def polarPlotsCubic(filenameList,straightLineDataDict,colours):
         pairedDataset = pd.DataFrame({'speedList':speedList,'TWAlist':TWAList})
         pairedDataset = pairedDataset.sort_values('TWAlist') # order by TWA list
         step=1
-        window=30
+        window=20
         theta = []
         r = []
-        for angle in range(30,171,step):
+        for angle in range(20,171,step):
             validPoints = []
             theta.append(np.deg2rad(angle))
             validPoints = pairedDataset[(pairedDataset['TWAlist']>=(angle-window/2))*(pairedDataset['TWAlist']<=(angle+window/2))]
             validPoints=validPoints[validPoints['speedList']>=1.5]
             if not validPoints.empty:
-                r.append(np.nanmedian(validPoints['speedList']))
+                r.append(np.nanmean(validPoints['speedList']))
             else:
                 r.append(np.nan)
         medians={'theta':theta,'r':r}
