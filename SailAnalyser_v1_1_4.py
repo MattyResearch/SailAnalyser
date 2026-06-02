@@ -14,7 +14,7 @@ violinPlotDict = None
 mapPlotDict = None
 analysedDataDict = None
 straightLineDataDict = None
-version = 'v1.1.3'
+version = 'v1.1.4'
 
 def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDict,satelliteBool):
     cropInput = copy.deepcopy(browseData.crops)
