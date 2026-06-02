@@ -32,22 +32,23 @@ def extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=20):
                 if manoeuvre < len(manoeuvreData)-2:
                     manoeuvre+=1
         if not skip:
+            tSpline = int((gpsData['time'][i]-gpsData['time'][0])/dt.timedelta(seconds=1))
             t1 = int((manoeuvreData.iloc[manoeuvre]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
             t2 = int((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
             if gpsData.iloc[i]['time'] < manoeuvreData.iloc[0]['time']: # case before the first manoeuvre
                 boatVelocity = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[0]['spline'])
                 if manoeuvreData.iloc[manoeuvre]['tack']:
-                    pointTWA =  np.pi+np.arctan2(boatVelocity[0],boatVelocity[1])# tack direction is directly head to wind
+                    pointTWA =  (np.pi+np.arctan2(boatVelocity[0],boatVelocity[1]))[0]# tack direction is directly head to wind
                 else:
-                    pointTWA = np.arctan2(boatVelocity[0],boatVelocity[1])# gybe direction is directly downwind
+                    pointTWA = (np.arctan2(boatVelocity[0],boatVelocity[1]))[0]# gybe direction is directly downwind
 
             elif gpsData.iloc[i]['time'] > manoeuvreData['time'][len(manoeuvreData)-1]: # case after the last manoeuvre
                 t1 = int((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
                 boatVelocity = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[manoeuvre+1]['spline'])
                 if manoeuvreData.iloc[manoeuvre+1]['tack']:
-                    pointTWA =  np.pi+np.arctan2(boatVelocity[0],boatVelocity[1])# tack direction is directly head to wind
+                    pointTWA =  (np.pi+np.arctan2(boatVelocity[0],boatVelocity[1]))[0]# tack direction is directly head to wind
                 else:
-                    pointTWA = np.arctan2(boatVelocity[0],boatVelocity[1])# gybe direction is directly downwind
+                    pointTWA = (np.arctan2(boatVelocity[0],boatVelocity[1]))[0]# gybe direction is directly downwind
 
             else: # other cases where straight line is bounded by manoeuvres
                 boatVelocityStart = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[manoeuvre]['spline']) # manoeuvre pre-line
@@ -61,10 +62,10 @@ def extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=20):
                 boatStartNorm = boatVelocityStart/np.linalg.norm(boatVelocityStart)
                 boatEndNorm = boatVelocityEnd/np.linalg.norm(boatVelocityEnd)
                 
-                twaAvg = np.atan2(boatEndNorm[0]+boatStartNorm[0],boatEndNorm[1]+boatStartNorm[1]) # add vectors to find total wind angle
+                twaInterp = np.atan2(np.interp(tSpline,[t1,t2],[boatStartNorm[0][0],boatEndNorm[0][0]]),np.interp(tSpline,[t1,t2],[boatStartNorm[1][0],boatEndNorm[1][0]])) # interpolate unit vectors to find total wind angle
 
-                pointTWA = twaAvg
-            localTWA.append(np.remainder(pointTWA[0]*180/np.pi,360))
+                pointTWA = twaInterp
+            localTWA.append(np.remainder(pointTWA*180/np.pi,360))
         i+=1
     straightLineData = straightLineData.assign(localTWA=localTWA)
     return straightLineData
@@ -425,11 +426,11 @@ def polarPlotsCubic(filenameList,straightLineDataDict,colours):
             validPoints = pairedDataset[(pairedDataset['TWAlist']>=(angle-window/2))*(pairedDataset['TWAlist']<=(angle+window/2))]
             validPoints=validPoints[validPoints['speedList']>=1.5]
             if not validPoints.empty:
-                r.append(np.mean(validPoints['speedList']))
+                r.append(np.nanmedian(validPoints['speedList']))
             else:
                 r.append(np.nan)
         medians={'theta':theta,'r':r}
-        polarDataDict[i]={'speedList':speedList,'TWAlist':TWAList,'medians':medians}
+        polarDataDict[i]={'speedList':speedList,'TWAlist':np.deg2rad(TWAList),'medians':medians}
         polarPlotDict = polarPlotter(filenameList,polarDataDict[i],polarPlotDict if i>0 else None,colours[i][1],filenameList[i].rsplit('/', 1)[1],i)
     return polarPlotDict,polarDataDict
 
