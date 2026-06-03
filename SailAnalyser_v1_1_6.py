@@ -17,7 +17,7 @@ analysedDataDict = None
 straightLineDataDict = None
 version = 'v1.1.6'
 
-def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDict,satelliteBool):
+def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDict,satbool):
     cropInput = copy.deepcopy(browseData.crops)
     cropInput[index]=input
     if (cropInput[1]!=0 and cropInput[0]>=cropInput[1]) or (cropInput[3]!=0 and cropInput[2]>=cropInput[3]):
@@ -44,7 +44,7 @@ def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDic
                 mapInputDict[i][axis]=mapInputDict[i][axis][cuts['start']*4:-cuts['end']*4]
             else:
                 mapInputDict[i][axis]=mapInputDict[i][axis][cuts['start']*4:]
-    mapPlotDict = plotmapsCubic(filenameList,mapInputDict,straightLineDataDict,satelliteBool)
+    mapPlotDict = plotmapsCubic(filenameList,mapInputDict,straightLineDataDict,False)
     if len(filenameList)>1:
         app_window.children["!notebook"].children["!frame2"].children["!frame"].pack(side='top', fill=None,expand=True)
     else:
@@ -57,6 +57,8 @@ def MainUpdateGraphs(filenameList,windAngleList,satelliteBool,crops):
 
     if (len(windAngleList)<2 or windAngleList[1] == None) and len(filenameList)>1: # clears up bug where only one windAngle is input
         windAngleList[1] = windAngleList[0]
+    for i in range(len(windAngleList)):
+        windAngleList[i]=None if windAngleList[i]=='' else np.remainder(float(windAngleList[i]),360)
 
     # read advanced settings from GUI
     windowSize =app_window.children["!notebook"].children["!frame"].children["!frame2"].children["!scale"].get()  # Get the window size from the scale widget
