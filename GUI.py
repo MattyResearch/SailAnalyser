@@ -9,6 +9,7 @@ import ctypes
 import requests
 import numpy as np
 import pandas as pd
+from straightLineAnalysis import read_xml
 
 '''
 GUI to import files into SailAnalyser
@@ -28,7 +29,7 @@ class passToTk:
 
 browseData= passToTk()  # Create an instance of passToTk to hold filenames and initial directory
 
-def browseFiles(file_number=1,fileFrame=None):
+def browseFiles(app_window,file_number=1,fileFrame=None):
     filename = filedialog.askopenfilename(initialdir = browseData.initialdir,
                                           title = "Select a File",
                                           filetypes = (("Garmin GPX files",
@@ -40,11 +41,22 @@ def browseFiles(file_number=1,fileFrame=None):
     if file_number == 1:
         fileFrame.children["!label"].configure(text="File 1: "+filename)
         browseData.filenameList[0] = filename
+        setCrops(0,0)
+        setCrops(1,0) # update crops to 0 for new file
     elif file_number == 2:
         fileFrame.children["!label2"].configure(text="File 2: "+filename)
         if len(browseData.filenameList) < 2:
             browseData.filenameList.append("")
         browseData.filenameList[1] = filename
+        setCrops(2,0)
+        setCrops(3,0) # update crops to 0 for new file
+    if filename != '':
+        xmldata = read_xml(inputFile=filename,outputFile=None)
+        durationDict={0:None,1:None}
+        for i in range(len(browseData.filenameList)):
+            durationDict[i] = {'duration':(xmldata['time'].iloc[-1]-xmldata['time'][0])/pd.Timedelta(minutes=1)}
+        updateCropSliders(app_window,browseData.filenameList,durationDict) # resets crop sliders to match xml duration for bug avoidance
+
     fileFrame.grid(column = 0, row = 0, rowspan=2,sticky="e")
 
 def saveGraph(plotFig):
@@ -296,12 +308,12 @@ def create_window(version):
     button_explore_1 = Button(fullFrame, 
                             text = "Browse Files",
                             width=10,height=2,
-                            command = lambda: browseFiles(1,fileFrame))
+                            command = lambda: browseFiles(app_window,1,fileFrame))
 
     button_explore_2 = Button(fullFrame, 
                             text = "Browse Files",
                             width=10,height=2,
-                            command = lambda: browseFiles(2,fileFrame))
+                            command = lambda: browseFiles(app_window,2,fileFrame))
 
     button_confirm = Button(fullFrame, 
                         text = "Confirm\n&\nAnalyse",
