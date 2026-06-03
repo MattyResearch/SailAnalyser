@@ -58,7 +58,7 @@ def MainUpdateGraphs(filenameList,windAngleList,satelliteBool,crops):
     if (len(windAngleList)<2 or windAngleList[1] == None) and len(filenameList)>1: # clears up bug where only one windAngle is input
         windAngleList[1] = windAngleList[0]
     for i in range(len(windAngleList)):
-        windAngleList[i]=None if windAngleList[i]=='' else np.remainder(float(windAngleList[i]),360)
+        windAngleList[i]=None if (windAngleList[i]=='' or windAngleList[i]==None) else np.remainder(float(windAngleList[i]),360)
 
     # read advanced settings from GUI
     windowSize =app_window.children["!notebook"].children["!frame"].children["!frame2"].children["!scale"].get()  # Get the window size from the scale widget
