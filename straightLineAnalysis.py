@@ -32,9 +32,9 @@ def extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=20):
                 if manoeuvre < len(manoeuvreData)-2:
                     manoeuvre+=1
         if not skip:
-            tSpline = int((gpsData['time'][i]-gpsData['time'][0])/dt.timedelta(seconds=1))
-            t1 = int((manoeuvreData.iloc[manoeuvre]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
-            t2 = int((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
+            tSpline = np.float64((gpsData['time'][i]-gpsData['time'][0])/dt.timedelta(seconds=1))
+            t1 = np.float64((manoeuvreData.iloc[manoeuvre]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
+            t2 = np.float64((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
             if gpsData.iloc[i]['time'] < manoeuvreData.iloc[0]['time']: # case before the first manoeuvre
                 boatVelocity = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[0]['spline'])
                 if manoeuvreData.iloc[manoeuvre]['tack']:
@@ -42,8 +42,8 @@ def extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=20):
                 else:
                     pointTWA = (np.arctan2(boatVelocity[0],boatVelocity[1]))[0]# gybe direction is directly downwind
 
-            elif gpsData.iloc[i]['time'] > manoeuvreData['time'][len(manoeuvreData)-1]: # case after the last manoeuvre
-                t1 = int((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
+            elif gpsData.iloc[i]['time'] > manoeuvreData.iloc[len(manoeuvreData)-1]['time']: # case after the last manoeuvre
+                t1 = np.float64((manoeuvreData.iloc[manoeuvre+1]['time']-gpsData['time'][0])/dt.timedelta(seconds=1))
                 boatVelocity = f_1(t1,xCoeffs,yCoeffs,manoeuvreData.iloc[manoeuvre+1]['spline'])
                 if manoeuvreData.iloc[manoeuvre+1]['tack']:
                     pointTWA =  (np.pi+np.arctan2(boatVelocity[0],boatVelocity[1]))[0]# tack direction is directly head to wind

@@ -15,7 +15,7 @@ mapPlotDict = None
 polarPlotDict={}
 analysedDataDict = None
 straightLineDataDict = None
-version = 'v1.1.6'
+version = 'v1.2.0'
 
 def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDict,satbool):
     cropInput = copy.deepcopy(browseData.crops)
@@ -70,6 +70,7 @@ def MainUpdateGraphs(filenameList,windAngleList,satelliteBool,crops):
         app_window.children["!notebook"].children["!frame3"].pack_slaves()[1].destroy()
         app_window.children["!notebook"].children["!frame4"].pack_slaves()[1].destroy()
         app_window.children["!notebook"].children["!frame5"].pack_slaves()[1].destroy()
+        app_window.children["!notebook"].children["!frame6"].pack_slaves()[1].destroy()
 
     if filenameList==["",""]:
         print ("No files selected.")
