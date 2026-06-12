@@ -62,7 +62,7 @@ def extractStraightLines(gpsData, manoeuvreData, xCoeffs,yCoeffs,windowSize=20):
                 boatStartNorm = boatVelocityStart/np.linalg.norm(boatVelocityStart)
                 boatEndNorm = boatVelocityEnd/np.linalg.norm(boatVelocityEnd)
                 
-                twaInterp = np.atan2(np.interp(tSpline,[t1,t2],[boatStartNorm[0][0],boatEndNorm[0][0]]),np.interp(tSpline,[t1,t2],[boatStartNorm[1][0],boatEndNorm[1][0]])) # interpolate unit vectors to find total wind angle
+                twaInterp = np.arctan2(np.interp(tSpline,[t1,t2],[boatStartNorm[0][0],boatEndNorm[0][0]]),np.interp(tSpline,[t1,t2],[boatStartNorm[1][0],boatEndNorm[1][0]])) # interpolate unit vectors to find total wind angle
 
                 pointTWA = twaInterp
             localTWA.append(np.remainder(pointTWA*180/np.pi,360))
@@ -378,7 +378,7 @@ def straightLineAnalysisCubic(filenameList, windAngleList,analysedDataDict,windo
 def polarPlotter(filenameList,polarDataDict,polarPlotDict,colours,name,i):
     print("Plotting Polar Plots...")
     LimTWA = [0,180]
-    LimSpeed = max(polarDataDict['medians']['r'])
+    LimSpeed = np.nanmax(polarDataDict['medians']['r'])*1.1
     if polarPlotDict == None:
         polarFig = plt.figure(figsize=(10, 8),layout='constrained')
         polarAx = filenameList.copy()

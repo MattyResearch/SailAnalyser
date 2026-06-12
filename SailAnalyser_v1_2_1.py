@@ -15,7 +15,7 @@ mapPlotDict = None
 polarPlotDict={}
 analysedDataDict = None
 straightLineDataDict = None
-version = 'v1.2.0'
+version = 'v1.2.1'
 
 def setCropButtons(index,input,filenameList,analysedDataDict,straightLineDataDict,satbool):
     cropInput = copy.deepcopy(browseData.crops)
